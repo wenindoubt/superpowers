@@ -119,6 +119,26 @@ Every step must contain the actual content an engineer needs. These are **plan f
 - Exact commands with expected output
 - DRY, YAGNI, TDD, frequent commits
 
+## Mandatory Web-Research Pass
+
+After mapping the File Structure and BEFORE finalizing tasks that depend on external APIs/libraries/config, always run a web-research pass to verify those dependencies.
+
+Dispatch the researcher:
+
+    Agent(
+      subagent_type: "kiln-web-search-researcher",
+      description: "verify plan deps",
+      prompt: "Implementation plan for: <feature>.
+               Verify these external dependencies the plan relies on: <exact APIs / signatures / config keys / versions>.
+               Return: confirmed signatures/usage, current stable versions, breaking-change or deprecation warnings, and source URLs.
+               If the plan has no external dependencies, reply exactly 'no external research needed' and stop."
+    )
+
+- Use confirmed facts in the task code blocks (no placeholders).
+- If "no external research needed", continue normally.
+- On researcher failure, tell the user and flag the unverified dependency in the plan.
+- Cite verified facts (with source URLs) inline where each external dependency is first used.
+
 ## Self-Review
 
 After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a checklist you run yourself — not a subagent dispatch.
