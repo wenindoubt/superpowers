@@ -135,7 +135,7 @@ Dispatch the researcher:
     )
 
 - Use confirmed facts in the task code blocks (no placeholders).
-- If "no external research needed", continue normally.
+- If "no external research needed", continue normally and note that in the plan header.
 - On researcher failure, tell the user and flag the unverified dependency in the plan.
 - Cite verified facts (with source URLs) inline where each external dependency is first used.
 
