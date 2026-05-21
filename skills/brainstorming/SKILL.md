@@ -24,6 +24,7 @@ You MUST create a task for each of these items and complete them in order:
 1. **Explore project context** — check files, docs, recent commits
 2. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
 3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3b. **Mandatory web-research pass** — dispatch kiln-web-search-researcher on external unknowns before proposing approaches (see Mandatory Web-Research Pass below)
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
 6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
@@ -134,6 +135,27 @@ Wait for the user's response. If they request changes, make them and re-run the 
 
 - Invoke the writing-plans skill to create a detailed implementation plan
 - Do NOT invoke any other skill. writing-plans is the next step.
+
+## Mandatory Web-Research Pass
+
+After clarifying questions and BEFORE proposing approaches, always run a web-research pass so the design is built on verified, current facts.
+
+Dispatch the researcher:
+
+    Agent(
+      subagent_type: "kiln-web-search-researcher",
+      description: "research <topic>",
+      prompt: "We are designing: <scoped topic from the clarifying questions>.
+               Research these external unknowns: <APIs / libraries / versions / best practices the design depends on>.
+               Return: conclusions, current stable versions, known gotchas, and source URLs.
+               If no external facts apply to this task, reply exactly 'no external research needed' and stop."
+    )
+
+- Dispatch multiple researchers in parallel when the unknowns are independent.
+- Fold the conclusions into the dialogue — let them shape the 2-3 approaches.
+- If the researcher returns "no external research needed", continue and record that in the spec.
+- If the researcher fails/times out, tell the user and proceed with the assumption flagged explicitly.
+- When writing the design doc, add a `## Research Findings` section listing each finding with its source URL and retrieval date, or "No external research required for this task."
 
 ## Key Principles
 
