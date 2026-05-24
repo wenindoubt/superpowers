@@ -119,7 +119,8 @@ If the flag is NOT set, ignore this section and run the steps below solo.
 
 **Working in existing codebases:**
 
-- Explore the current structure before proposing changes. Follow existing patterns.
+<!-- codebase-memory-mcp: fork-local -->
+- Explore the current structure before proposing changes. Follow existing patterns. If `codebase-memory-mcp` tools are available, prefer them for this exploration — faster, more token-efficient, more accurate: `get_architecture` (structure overview), `search_graph` (find funcs/classes/routes), `trace_path` (call chains / data flow), `get_code_snippet` (read source by qualified name), `search_code` (graph-augmented grep). If the repo isn't indexed, run `index_repository` first (`index_status` to check). Fall back to Grep/Glob/Read for text/config/unindexed code.
 - Where existing code has problems that affect the work (e.g., a file that's grown too large, unclear boundaries, tangled responsibilities), include targeted improvements as part of the design - the way a good developer improves code they're working in.
 - Don't propose unrelated refactoring. Stay focused on what serves the current goal.
 
