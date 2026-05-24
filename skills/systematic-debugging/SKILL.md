@@ -51,6 +51,9 @@ You MUST complete each phase before proceeding to the next.
 
 **BEFORE attempting ANY fix:**
 
+<!-- codebase-memory-mcp: fork-local -->
+**Locating code during investigation:** If `codebase-memory-mcp` tools are available, prefer them for tracing the bug — faster, more token-efficient, more accurate: `search_graph` (find the failing func/class/route), `trace_path` (call chains / data flow to follow how a value reaches the failure), `get_code_snippet` (read source by qualified name), `get_architecture` (structure), `search_code` (graph-augmented grep). If the repo isn't indexed, run `index_repository` first (`index_status` to check). Fall back to Grep/Glob/Read for text/config/unindexed code.
+
 1. **Read Error Messages Carefully**
    - Don't skip past errors or warnings
    - They often contain the exact solution
