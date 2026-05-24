@@ -4,6 +4,8 @@ Use this template when dispatching a code reviewer subagent.
 
 **Purpose:** Review completed work against requirements and code quality standards before it cascades into more work.
 
+<!-- codebase-memory-mcp: fork-local — the "Reading the Code" block inside the prompt below is fork-local guidance -->
+
 ```
 Task tool (general-purpose):
   description: "Review code changes"
@@ -29,6 +31,16 @@ Task tool (general-purpose):
     git diff --stat {BASE_SHA}..{HEAD_SHA}
     git diff {BASE_SHA}..{HEAD_SHA}
     ```
+
+    ## Reading the Code
+
+    Use git for the diff itself. To understand the surrounding code (callers, definitions,
+    structure), if `codebase-memory-mcp` tools are available, prefer them over reading files —
+    faster, more token-efficient, more accurate: `search_graph` (find funcs/classes/routes),
+    `trace_path` (call chains / data flow, e.g. who calls a changed function),
+    `get_code_snippet` (read source by qualified name), `get_architecture` (structure),
+    `search_code` (graph-augmented grep). If the repo isn't indexed, run `index_repository`
+    first (`index_status` to check). Fall back to Grep/Glob/Read for text/config/unindexed code.
 
     ## What to Check
 
