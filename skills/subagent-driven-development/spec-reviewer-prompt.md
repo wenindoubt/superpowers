@@ -4,6 +4,8 @@ Use this template when dispatching a spec compliance reviewer subagent.
 
 **Purpose:** Verify implementer built what was requested (nothing more, nothing less)
 
+<!-- codebase-memory-mcp: fork-local — the "Reading the Code Efficiently" block inside the prompt below is fork-local guidance -->
+
 ```
 Task tool (general-purpose):
   description: "Review spec compliance for Task N"
@@ -33,6 +35,15 @@ Task tool (general-purpose):
     - Compare actual implementation to requirements line by line
     - Check for missing pieces they claimed to implement
     - Look for extra features they didn't mention
+
+    ## Reading the Code Efficiently
+
+    If `codebase-memory-mcp` tools are available, prefer them over reading files for
+    code discovery — faster, more token-efficient, more accurate: `search_graph` (find
+    funcs/classes/routes), `trace_path` (call chains / data flow), `get_code_snippet`
+    (read source by qualified name), `get_architecture` (structure), `search_code`
+    (graph-augmented grep). If the repo isn't indexed, run `index_repository` first
+    (`index_status` to check). Fall back to Grep/Glob/Read for text/config/unindexed code.
 
     ## Your Job
 
