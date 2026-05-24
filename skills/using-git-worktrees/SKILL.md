@@ -38,11 +38,11 @@ Report with branch state:
 
 **If `GIT_DIR == GIT_COMMON` (or in a submodule):** You are in a normal repo checkout.
 
-Has the user already indicated their worktree preference in your instructions? If not, ask for consent before creating a worktree:
+Default to creating an isolated worktree. Do NOT ask for consent — proceed directly to Step 1.
 
-> "Would you like me to set up an isolated worktree? It protects your current branch from changes."
+> "Setting up an isolated worktree to protect your current branch."
 
-Honor any existing declared preference without asking. If the user declines consent, work in place and skip to Step 3.
+(The user has set a standing preference: always use git worktrees, never a plain feature branch in place, and never prompt to choose.)
 
 ## Step 1: Create Isolated Workspace
 
