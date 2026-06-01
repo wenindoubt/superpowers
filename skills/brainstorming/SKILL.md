@@ -175,6 +175,7 @@ Dispatch the researcher:
 - If the researcher returns "no external research needed", continue and record that in the spec.
 - If the researcher fails/times out, tell the user and proceed with the assumption flagged explicitly.
 - When writing the design doc, add a `## Research Findings` section listing each finding with its source URL and retrieval date, or "No external research required for this task."
+- **High-stakes unknowns — auto-escalate.** After the kiln pass returns, if an unknown is high-stakes (architecture-deciding / contested / costly-if-wrong) and `/deep-research` is available, auto-escalate it per `skills/brainstorming/deep-research-escalation.md` — announce and invoke, no user prompt. <!-- deep-research-escalation: fork-local -->
 
 ## Key Principles
 
