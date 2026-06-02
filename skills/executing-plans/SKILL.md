@@ -16,6 +16,8 @@ Load plan, review critically, execute all tasks, report when complete.
 ## The Process
 
 <!-- beads-native: fork-local -->
+The plan is an epic + task beads, not a markdown file — see `skills/_shared/beads-workflow.md` for the bead model.
+
 ### Step 1: Load and review the epic
 1. `bd show "$EPIC" --json` and `bd ready --parent "$EPIC" --json` — review the work critically
 2. Concerns → raise with your human partner before starting
