@@ -15,8 +15,18 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated worktree, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-- (User preferences for plan location override this default)
+<!-- beads-native: fork-local -->
+**Save plans as beads** (run the ask-first preflight in `skills/_shared/beads-workflow.md` first):
+
+    EPIC=$(bd create --type epic --title "<feature>" --silent -d - <<'GOAL'
+    Goal: <one sentence>
+    Architecture: <2-3 sentences>
+    Tech Stack: <key tech>
+    GOAL
+    )
+    bd update "$EPIC" --spec-id "$DECISION"   # decision bead ID from brainstorming, if present
+
+If the human declined beads, fall back to `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md` (user preferences for plan location override this default).
 
 ## Scope Check
 
@@ -64,6 +74,30 @@ This structure informs the task decomposition. Each task should produce self-con
 ```
 
 ## Task Structure
+
+<!-- beads-native: fork-local -->
+**Each task = one `task` bead** (not a markdown section). The 5 TDD steps + code blocks go in the bead BODY as a checklist — never as separate beads.
+
+    T=$(bd create --type task --parent "$EPIC" --title "<task name>" \
+      --acceptance "tests pass + committed" --silent --description=- <<'BODY'
+    ### Files
+    - Create: <path>   - Modify: <path:lines>   - Test: <path>
+
+    - [ ] Step 1: Write the failing test
+    <test code>
+    - [ ] Step 2: Run it, verify it fails — `<cmd>` → FAIL
+    - [ ] Step 3: Minimal implementation
+    <impl code>
+    - [ ] Step 4: Run it, verify it passes — `<cmd>` → PASS
+    - [ ] Step 5: Commit (include "(bd-<this-id>)" in the message)
+    BODY
+    )
+
+Wire ordering with dependencies (a task that must follow another):
+
+    bd dep add "$T_later" "$T_earlier" --type blocks
+
+The markdown structure below now describes the **bead body** content (Files + bite-sized steps):
 
 ````markdown
 ### Task N: [Component Name]
@@ -159,7 +193,7 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 After saving the plan, default to Subagent-Driven execution. Do not ask which approach — proceed directly.
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Executing Subagent-Driven: fresh subagent per task, review between tasks."**
+**"Plan complete: epic `$EPIC` with N task beads. Executing Subagent-Driven: fresh subagent per ready task, review between tasks."** <!-- beads-native: fork-local -->
 
 - **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
 - Fresh subagent per task + two-stage review
