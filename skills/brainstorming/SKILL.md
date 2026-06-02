@@ -27,7 +27,7 @@ You MUST create a task for each of these items and complete them in order:
 4. **Mandatory web-research pass** — dispatch kiln-web-search-researcher on external unknowns before proposing approaches (see Mandatory Web-Research Pass below)
 5. **Propose 2-3 approaches** — with trade-offs and your recommendation
 6. **Present design** — in sections scaled to their complexity, get user approval after each section
-7. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
+7. **Write the design** — as a `decision` bead (beads-native; markdown fallback if beads declined). See "After the Design". <!-- beads-native: fork-local -->
 8. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
