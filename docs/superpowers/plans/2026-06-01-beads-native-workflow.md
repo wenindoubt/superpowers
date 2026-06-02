@@ -48,7 +48,7 @@ Facts confirmed: hierarchical IDs (`epic`, `epic.1`, `epic.2`); `bd ready --pare
 | `skills/writing-plans/SKILL.md` | modify | Plan output: markdown file → `epic` + `task` beads |
 | `skills/subagent-driven-development/SKILL.md` | modify | Task source: markdown checkboxes → `bd ready` loop |
 | `skills/executing-plans/SKILL.md` | modify | Task source: markdown checkboxes → `bd ready` loop |
-| `~/.claude/skills/session-handoff/SKILL.md` | modify | Handoff: markdown doc → note-on-bead / no-op (lives outside repo) |
+| `skills/session-handoff/SKILL.md` | **move-in + modify** | Moved from `~/.claude/skills/`; handoff markdown doc → note-on-bead / no-op. Consolidates all behavior into the repo. |
 | `tests/beads-workflow/smoke-test.sh` | create | End-to-end pipeline assertion in a scratch repo |
 
 **Edit convention:** all skill edits are fork-local — mark inserted blocks with `<!-- beads-native: fork-local -->` (matching the repo's existing `<!-- ...: fork-local -->` markers) so they're greppable and distinguishable from upstream content.
@@ -342,14 +342,24 @@ git commit -m "feat(beads): executing-plans drives from bd ready (bd-<id>)"
 
 ---
 
-## Task 6: session-handoff → note-on-bead / no-op
+## Task 6: Consolidate session-handoff into the repo + note-on-bead / no-op
 
 **Files:**
-- Modify: `~/.claude/skills/session-handoff/SKILL.md` (outside the repo — personal skill)
+- Move: `~/.claude/skills/session-handoff/SKILL.md` → `skills/session-handoff/SKILL.md`
+- Modify: `skills/session-handoff/SKILL.md` (the moved copy)
+- Delete: `~/.claude/skills/session-handoff/` (avoid name collision / double-load)
 
-- [ ] **Step 1: Replace the markdown-doc workflow with bead state + conditional note**
+- [ ] **Step 1: Move the skill into the repo**
 
-Replace "## The workflow" steps 2-4 and the "Document template" with a fork-local block:
+```bash
+mkdir -p skills/session-handoff
+cp ~/.claude/skills/session-handoff/SKILL.md skills/session-handoff/SKILL.md
+```
+(Source is outside this git repo, so `cp` not `git mv`; the original is removed in Step 4.)
+
+- [ ] **Step 2: Replace the markdown-doc workflow with bead state + conditional note**
+
+In `skills/session-handoff/SKILL.md`, replace "## The workflow" steps 2-4 and the "Document template" with a fork-local block:
 
 ```markdown
 <!-- beads-native: fork-local -->
@@ -371,14 +381,21 @@ State lives in beads. Do NOT write a handoff markdown file.
 3. **Output**: the trigger phrase, not a file path: *"New session: 'do the next ready work'"* (and the note ID if one was written).
 ```
 
-- [ ] **Step 2: Verify edits**
+- [ ] **Step 3: Verify edits**
 
-Run: `grep -c "do the next ready work\|bd note\|in_progress\|bd ready --parent" ~/.claude/skills/session-handoff/SKILL.md`
+Run: `grep -c "do the next ready work\|bd note\|in_progress\|bd ready --parent" skills/session-handoff/SKILL.md`
 Expected: ≥ 3.
 
-- [ ] **Step 3: Commit (separate repo or note it's outside git)**
+- [ ] **Step 4: Delete the original + commit the move-in**
 
-`~/.claude/skills/` may not be a git repo. If it is, commit there; otherwise note in the final summary that this file changed outside version control.
+```bash
+rm -rf ~/.claude/skills/session-handoff
+# sanity: only the repo copy remains
+test -f skills/session-handoff/SKILL.md && ! test -e ~/.claude/skills/session-handoff
+git add skills/session-handoff/SKILL.md
+git commit -m "feat(beads): consolidate session-handoff into repo, beads-native handoff (bd-<id>)"
+```
+After this, restart Claude Code so the plugin loads `superpowers:session-handoff` and the stale personal skill is gone (no double-load).
 
 ---
 
@@ -463,9 +480,11 @@ Tell the human: the trigger-critical skills (brainstorming, session-handoff) sho
 - **Placeholders:** `<...>` angle-bracket slots are intentional fill-ins for the editing agent (skill content is templated by nature), not TODO placeholders; every `bd` command is concrete and verified.
 - **Consistency:** `$DECISION`/`$DEC`, `$EPIC`, `$T1/$T2` used consistently; `bd dep add <dependent> <blocker> --type blocks` matches verified syntax everywhere.
 
-## Unresolved questions
+## Resolved decisions
 
-1. **Shared-doc location** — `skills/_shared/beads-workflow.md` OK, or prefer a different home (e.g. inside one skill, or a `references/` dir)?
-2. **Dogfood the superpowers repo itself?** Running `bd init`/`bd setup claude` here edits the committed CLAUDE.md + adds AGENTS.md + hooks to a fork-synced repo. Plan currently does NOT init beads in this repo (only in *target* repos). Init here too, or keep out?
-3. **session-handoff is outside git** (`~/.claude/skills/`). Fine to edit in place uncommitted, or move it into a tracked dotfiles/plugin repo first?
-4. **Eval rigor** — smoke test only (current gate), or block on a full `writing-skills` adversarial eval before merging?
+1. **Shared-doc location** — `skills/_shared/beads-workflow.md` (one shared file, not 5 copies). Rename later if desired.
+2. **No dogfood** — do NOT `bd init` the superpowers repo itself; skills init beads only in *target* repos.
+3. **Consolidate session-handoff** — moved into `skills/session-handoff/` (Task 6); original deleted. All behavior now lives in the superpowers repo.
+4. **Eval rigor** — smoke test (Task 7) is the gate for this plan; one live trial each of brainstorming + session-handoff as follow-up. Full `writing-skills` adversarial eval only if a trial misbehaves.
+
+What inherently stays outside the repo (tool + per-project runtime, not sprawl): the `bd` binary, each target repo's `.beads/` data, and target repos' generated `AGENTS.md`/CLAUDE.md beads section.
