@@ -124,10 +124,20 @@ If the flag is NOT set, ignore this section and run the steps below solo.
 
 **Documentation:**
 
-- Write the validated design (spec) to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
-  - (User preferences for spec location override this default)
-- Use elements-of-style:writing-clearly-and-concisely skill if available
-- Commit the design document to git
+<!-- beads-native: fork-local -->
+- **Run the ask-first preflight** in `skills/_shared/beads-workflow.md`. If the human declines beads, fall back to writing `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` (user preferences for spec location override this default), use elements-of-style:writing-clearly-and-concisely if available, commit it, and skip the rest of this block.
+- Otherwise write the validated design as a **decision bead** (do NOT write a spec markdown file):
+
+      DECISION=$(bd create --type decision --title "<topic>" \
+        --description=- \
+        --design "<chosen approach + key tradeoffs>" --silent <<'SPEC'
+      <the full spec body: goal, architecture, components, data flow, error handling, testing>
+      SPEC
+      )
+      bd note "$DECISION" "Research Findings: <findings + source URLs + retrieval date>"
+
+- Record the decision bead ID — writing-plans needs it for `--spec-id`.
+- The auto-exported `.beads/issues.jsonl` is the committed artifact: `git add .beads/issues.jsonl && git commit -m "docs(spec): <topic> decision bead (bd-<id>)"`.
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
@@ -141,7 +151,7 @@ Fix any issues inline. No need to re-review — just fix and move on.
 
 **Implementation:**
 
-- Invoke the writing-plans skill to create a detailed implementation plan
+- Invoke the writing-plans skill to create a detailed implementation plan; pass it the decision bead ID (`$DECISION`) so the epic links via `--spec-id`. <!-- beads-native: fork-local -->
 - Do NOT invoke any other skill. writing-plans is the next step.
 
 ## Mandatory Web-Research Pass
