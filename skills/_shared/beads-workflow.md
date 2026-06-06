@@ -3,7 +3,7 @@
 
 The superpowers spec→plan→handoff pipeline stores everything in **beads** (`bd`), not markdown.
 This doc is referenced by: brainstorming, writing-plans, subagent-driven-development,
-executing-plans, session-handoff.
+executing-plans, cmux-handoff.
 
 ## Ask-first preflight (run before any bd write)
 
