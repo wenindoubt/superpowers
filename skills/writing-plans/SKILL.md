@@ -5,6 +5,16 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 # Writing Plans
 
+## First action: beads check (scripted, not judgment)
+
+Before anything else, run this — do NOT decide by feel:
+
+```bash
+command -v bd >/dev/null 2>&1 && echo "BEADS PRESENT: plans are beads, not markdown" || echo "no beads: markdown fallback"
+```
+
+If `bd` is present, the plan is an **epic bead + task beads** (run the ask-first preflight in `skills/_shared/beads-workflow.md`), NOT a `docs/superpowers/plans/*.md` file. The `beads-preflight` PreToolUse hook blocks the first attempt to Write a superpowers plan markdown while `bd` is available — that block is the reminder to create the beads first. Only fall back to markdown if the human declined beads.
+
 ## Overview
 
 Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.

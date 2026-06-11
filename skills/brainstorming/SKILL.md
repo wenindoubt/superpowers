@@ -5,6 +5,16 @@ description: "You MUST use this before any creative work - creating features, bu
 
 # Brainstorming Ideas Into Designs
 
+## First action: beads check (scripted, not judgment)
+
+Before anything else, run this — do NOT decide by feel:
+
+```bash
+command -v bd >/dev/null 2>&1 && echo "BEADS PRESENT: the spec is a decision bead, not markdown" || echo "no beads: markdown fallback"
+```
+
+If `bd` is present, the design/spec is a **decision bead** (run the ask-first preflight in `skills/_shared/beads-workflow.md`), NOT a `docs/superpowers/specs/*.md` file. The `beads-preflight` PreToolUse hook blocks the first attempt to Write a superpowers spec markdown while `bd` is available — that block is the reminder to create the bead first. Only fall back to markdown if the human declined beads.
+
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 
 Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
