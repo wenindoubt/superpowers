@@ -35,6 +35,9 @@ main() {
   transcript="$(printf '%s' "$input" | "$JQ_BIN" -r '.transcript_path // empty' 2>/dev/null)"
   [ -n "$transcript" ] && [ -r "$transcript" ] || exit 0
 
+  flag="$STATE_DIR/${session:-unknown}"
+  [ -n "$session" ] && [ -e "$flag" ] && exit 0       # already handed off this session
+
   mu="$(last_assistant_usage "$transcript")"; [ -n "$mu" ] || exit 0
   model="${mu% *}"; occ="${mu##* }"
   case "$occ" in ''|*[!0-9]*) exit 0 ;; esac
@@ -49,6 +52,7 @@ main() {
   case "$inprog" in ''|*[!0-9]*) inprog=0 ;; esac     # bd list failed -> treat as clean seam
   [ "$inprog" -eq 0 ] || exit 0                        # mid-task -> wait for a clean seam
 
+  if [ -n "$session" ]; then mkdir -p "$STATE_DIR" 2>/dev/null && : > "$flag" 2>/dev/null; fi
   pct_disp="$(awk -v o="$occ" -v w="$window" 'BEGIN{printf "%d",(o*100)/w}')"
   tk_disp="$(awk -v o="$occ" 'BEGIN{printf "%d",o/1000}')"
   printf '{"decision":"block","reason":"Context at %s%% (~%sk tokens) with ready beads work remaining. Invoke the cmux-handoff skill now (Skill tool: cmux-handoff) to hand off remaining work to a fresh session."}\n' "$pct_disp" "$tk_disp"

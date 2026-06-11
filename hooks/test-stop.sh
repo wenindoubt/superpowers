@@ -49,15 +49,24 @@ READY=0 run "over threshold but no ready -> exit0" 0 "" "$S"
 mk_transcript "$T" "claude-opus-4-8" 250000
 run "opus-4-8 250k = 25% of 1M -> NO fire" 0 "" "$S"
 mk_transcript "$T" "claude-sonnet-4-5" 80000  # sonnet-4-5 NOT in 1M set -> 200k default; 40%
-run "sonnet-4-5 80k = 40% of 200k -> FIRE" 0 '"decision":"block"' "$S"
-# --- MINIMAL FIRE + window override ---
+run "sonnet-4-5 80k = 40% of 200k -> FIRE" 0 '"decision":"block"' "{\"session_id\":\"fsonnet\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
+# --- MINIMAL FIRE + window override (unique session per fire so dedup flags don't bleed) ---
 mk_transcript "$T" "claude-opus-4-8" 350000
-READY=1 run "over threshold + ready -> FIRE (1M)" 0 '"decision":"block"' "$S"
+READY=1 run "over threshold + ready -> FIRE (1M)" 0 '"decision":"block"' "{\"session_id\":\"f1m\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
 mk_transcript "$T" "claude-opus-4-8" 250000
-READY=1 run "override 200k makes 250k = 125% -> FIRE" 0 '"decision":"block"' "$S" HANDOFF_CTX_WINDOW=200000
+READY=1 run "override 200k makes 250k = 125% -> FIRE" 0 '"decision":"block"' "{\"session_id\":\"fovr\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}" HANDOFF_CTX_WINDOW=200000
 
 # --- seam guard: mid-task -> NO fire ---
 mk_transcript "$T" "claude-opus-4-8" 350000   # 35% over threshold
 READY=2 INPROG=1 run "ready but in_progress (mid-task) -> exit0" 0 "" "$S"
+
+# --- dedup: fire once per session ---
+mk_transcript "$T" "claude-opus-4-8" 350000
+rm -rf "$TMP/state"
+D1="{\"session_id\":\"dedup1\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
+READY=1 run "first fire writes flag -> FIRE"              0 '"decision":"block"' "$D1"
+READY=1 run "second stop same session -> exit0 (deduped)" 0 "" "$D1"
+mkdir -p "$TMP/state"; : > "$TMP/state/pref"
+READY=1 run "pre-existing flag -> exit0" 0 "" "{\"session_id\":\"pref\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
 
 echo "----"; echo "PASS=$PASS FAIL=$FAIL"; [ "$FAIL" = 0 ]
