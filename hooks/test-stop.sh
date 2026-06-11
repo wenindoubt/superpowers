@@ -69,4 +69,12 @@ READY=1 run "second stop same session -> exit0 (deduped)" 0 "" "$D1"
 mkdir -p "$TMP/state"; : > "$TMP/state/pref"
 READY=1 run "pre-existing flag -> exit0" 0 "" "{\"session_id\":\"pref\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
 
+# --- wiring: hooks.json registers a Stop hook pointing at run-hook.cmd stop ---
+HJ="$(cd "$(dirname "$0")" && pwd)/hooks.json"
+if jq -e '.hooks.Stop[0].hooks[0].command | test("run-hook.cmd. stop")' "$HJ" >/dev/null 2>&1; then
+  PASS=$((PASS+1)); echo "ok   - hooks.json registers Stop -> run-hook.cmd stop"
+else
+  FAIL=$((FAIL+1)); echo "FAIL - hooks.json Stop wiring missing"
+fi
+
 echo "----"; echo "PASS=$PASS FAIL=$FAIL"; [ "$FAIL" = 0 ]
