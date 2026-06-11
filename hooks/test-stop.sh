@@ -56,4 +56,8 @@ READY=1 run "over threshold + ready -> FIRE (1M)" 0 '"decision":"block"' "$S"
 mk_transcript "$T" "claude-opus-4-8" 250000
 READY=1 run "override 200k makes 250k = 125% -> FIRE" 0 '"decision":"block"' "$S" HANDOFF_CTX_WINDOW=200000
 
+# --- seam guard: mid-task -> NO fire ---
+mk_transcript "$T" "claude-opus-4-8" 350000   # 35% over threshold
+READY=2 INPROG=1 run "ready but in_progress (mid-task) -> exit0" 0 "" "$S"
+
 echo "----"; echo "PASS=$PASS FAIL=$FAIL"; [ "$FAIL" = 0 ]

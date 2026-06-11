@@ -45,6 +45,10 @@ main() {
   case "$ready" in ''|*[!0-9]*) exit 0 ;; esac
   [ "$ready" -gt 0 ] || exit 0
 
+  inprog="$("$BD_BIN" list --status in_progress --json 2>/dev/null | "$JQ_BIN" 'length' 2>/dev/null)"
+  case "$inprog" in ''|*[!0-9]*) inprog=0 ;; esac     # bd list failed -> treat as clean seam
+  [ "$inprog" -eq 0 ] || exit 0                        # mid-task -> wait for a clean seam
+
   pct_disp="$(awk -v o="$occ" -v w="$window" 'BEGIN{printf "%d",(o*100)/w}')"
   tk_disp="$(awk -v o="$occ" 'BEGIN{printf "%d",o/1000}')"
   printf '{"decision":"block","reason":"Context at %s%% (~%sk tokens) with ready beads work remaining. Invoke the cmux-handoff skill now (Skill tool: cmux-handoff) to hand off remaining work to a fresh session."}\n' "$pct_disp" "$tk_disp"
