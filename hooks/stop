@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Stop hook — auto-trigger cmux-handoff when context is full AND ready beads work remains.
+# Spec: bd sp-dbk. FAIL-OPEN: any missing dep / parse error exits 0 (never traps a session).
+PCT="${HANDOFF_CTX_PCT:-0.30}"
+STATE_DIR="${HANDOFF_STATE_DIR:-$HOME/.claude/cmux-handoff-state}"
+BD_BIN="${BD_BIN:-bd}"
+JQ_BIN="${JQ_BIN:-jq}"
+
+infer_window() {
+  if [ -n "${HANDOFF_CTX_WINDOW:-}" ]; then printf '%s' "$HANDOFF_CTX_WINDOW"; return; fi
+  case "$1" in
+    *'[1m]'*|*opus-4-6*|*opus-4-7*|*opus-4-8*|*sonnet-4-6*|*fable-5*|*mythos*) printf '1000000' ;;
+    *) printf '200000' ;;
+  esac
+}
+last_assistant_usage() {
+  "$JQ_BIN" -rs '
+    [ .[] | select(.type=="assistant" and (.message.usage != null)) ] as $a
+    | if ($a|length)==0 then empty
+      else $a[-1].message as $m
+        | (($m.usage.input_tokens // 0)+($m.usage.cache_creation_input_tokens // 0)+($m.usage.cache_read_input_tokens // 0)) as $occ
+        | "\($m.model // "unknown") \($occ)" end
+  ' "$1" 2>/dev/null
+}
+main() {
+  [ "${HANDOFF_DISABLE:-}" = "1" ] && exit 0
+  command -v "$JQ_BIN" >/dev/null 2>&1 || exit 0
+  command -v "$BD_BIN" >/dev/null 2>&1 || exit 0
+  command -v awk >/dev/null 2>&1 || exit 0
+
+  input="$(cat)"; [ -n "$input" ] || exit 0
+  [ "$(printf '%s' "$input" | "$JQ_BIN" -r '.stop_hook_active // false' 2>/dev/null)" = "true" ] && exit 0
+
+  session="$(printf '%s' "$input" | "$JQ_BIN" -r '.session_id // empty' 2>/dev/null)"
+  transcript="$(printf '%s' "$input" | "$JQ_BIN" -r '.transcript_path // empty' 2>/dev/null)"
+  [ -n "$transcript" ] && [ -r "$transcript" ] || exit 0
+
+  mu="$(last_assistant_usage "$transcript")"; [ -n "$mu" ] || exit 0
+  model="${mu% *}"; occ="${mu##* }"
+  case "$occ" in ''|*[!0-9]*) exit 0 ;; esac
+  window="$(infer_window "$model")"
+  awk -v o="$occ" -v w="$window" -v p="$PCT" 'BEGIN{exit !(w>0 && (o/w)>=p)}' || exit 0
+
+  ready="$("$BD_BIN" ready --json 2>/dev/null | "$JQ_BIN" 'length' 2>/dev/null)"
+  case "$ready" in ''|*[!0-9]*) exit 0 ;; esac
+  [ "$ready" -gt 0 ] || exit 0
+
+  pct_disp="$(awk -v o="$occ" -v w="$window" 'BEGIN{printf "%d",(o*100)/w}')"
+  tk_disp="$(awk -v o="$occ" 'BEGIN{printf "%d",o/1000}')"
+  printf '{"decision":"block","reason":"Context at %s%% (~%sk tokens) with ready beads work remaining. Invoke the cmux-handoff skill now (Skill tool: cmux-handoff) to hand off remaining work to a fresh session."}\n' "$pct_disp" "$tk_disp"
+  exit 0
+}
+main
