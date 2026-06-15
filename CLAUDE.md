@@ -166,5 +166,5 @@ End EVERY response that completes a unit of work with a single final status line
 - `🟡 <status>` — a specific non-routine follow-up remains (name it).
 - `🔴 <status>` — blocked on user input.
 
-Under 100 chars, the very last line, nothing after it. The Stop hook reads this line to drive hands-free cmux-handoff: 🟡/🔴 keep the session working; 🟢 + ctx>=30% + ready beads -> a fresh cmux session starts automatically.
+Under 100 chars, the very last line, nothing after it. The Stop hook reads this line to drive a hands-free per-bead loop: 🟡/🔴 keep the session working; 🟢 + ready beads (no ctx gate by default) -> a fresh cmux session is spawned on the next `bd ready` bead and this session runs `/exit`. Brakes: empty `bd ready`, 🟡/🔴, in-progress bead, `HANDOFF_DISABLE=1`.
 <!-- /quick-recap: fork-local -->

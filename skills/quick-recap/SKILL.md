@@ -23,7 +23,10 @@ Rules:
 
 The Stop hook (hooks/stop) reads the LAST line of your final message:
 - 🔴 / 🟡 -> handoff suppressed (blocked / ongoing — keep working, recheck later).
-- 🟢 -> clean seam; if ctx >= 30% and ready beads remain, a fresh cmux session is started automatically.
+- 🟢 -> clean seam; if ready beads remain (per-bead default: no ctx gate), a fresh cmux session is
+  spawned on the next `bd ready` bead and THIS session runs `/exit` — an unbounded loop through ready
+  work, one bead per fresh context. (Restore a ctx gate with `HANDOFF_CTX_PCT=0.30`; full off-switch
+  is `HANDOFF_DISABLE=1`.)
 
 An inaccurate footer mis-drives that automation. Choose the color from the user's perspective: finished, pending-a-specific-step, or blocked.
 

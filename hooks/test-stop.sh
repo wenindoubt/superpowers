@@ -45,13 +45,16 @@ run "disable kill-switch"          0 "" "{\"session_id\":\"s1\",\"transcript_pat
 run "loop guard stop_hook_active"  0 "" "{\"session_id\":\"s1\",\"transcript_path\":\"$T\",\"stop_hook_active\":true}"
 run "missing transcript path"      0 "" "{\"session_id\":\"s1\",\"stop_hook_active\":false}"
 run "unreadable transcript"        0 "" "{\"session_id\":\"s1\",\"transcript_path\":\"$TMP/nope.jsonl\",\"stop_hook_active\":false}"
-run "below threshold (5% of 1M)"   0 "" "$S"
+run "below explicit 30% gate (5% of 1M)" 0 "" "$S" HANDOFF_CTX_PCT=0.30
+# --- per-bead default (PCT=0): any occupancy fires, no ctx gate ---
+mk_transcript "$T" "claude-opus-4-8" 50000   # 5% of 1M
+READY=1 run "per-bead default 5% -> FIRE" 0 '"decision":"block"' "{\"session_id\":\"fpb\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
 # --- ready check ---
 mk_transcript "$T" "claude-opus-4-8" 350000   # 35% of 1M
 READY=0 run "over threshold but no ready -> exit0" 0 "" "$S"
-# --- window inference: model name decides 1M vs 200k (250k = 25% of 1M but 125% of 200k) ---
+# --- window inference + explicit gate: 250k = 25% of 1M, below the configured 30% -> NO fire ---
 mk_transcript "$T" "claude-opus-4-8" 250000
-run "opus-4-8 250k = 25% of 1M -> NO fire" 0 "" "$S"
+run "opus-4-8 250k = 25% under 30% gate -> NO fire" 0 "" "$S" HANDOFF_CTX_PCT=0.30
 mk_transcript "$T" "claude-sonnet-4-5" 80000  # sonnet-4-5 NOT in 1M set -> 200k default; 40%
 run "sonnet-4-5 80k = 40% of 200k -> FIRE" 0 '"decision":"block"' "{\"session_id\":\"fsonnet\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
 # --- MINIMAL FIRE + window override (unique session per fire so dedup flags don't bleed) ---
@@ -81,14 +84,15 @@ READY=1 run "footer 🟡 -> suppress" 0 "" "{\"session_id\":\"fyel\",\"transcrip
 mk_transcript "$T" "claude-opus-4-8" 350000 "🟢 Wired footer-aware handoff"
 READY=1 run "footer 🟢 (body has 🔴🟡) -> still fires" 0 '"decision":"block"' "{\"session_id\":\"fgrn\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
 
-# --- C path: in cmux -> direct spawn via HANDOFF_SH stub, no block on stdout ---
+# --- C path: in cmux -> direct spawn via HANDOFF_SH stub, then self /exit on success ---
 mk_bd_stub "$TMP/bin" 2 0
-cat > "$TMP/bin/cmux" <<'CMX'
+cat > "$TMP/bin/cmux" <<CMX
 #!/usr/bin/env bash
+echo "\$*" >> "$TMP/cmux.log"
 exit 0
 CMX
 chmod +x "$TMP/bin/cmux"
-SPAWN_LOG="$TMP/spawn.log"; rm -f "$SPAWN_LOG"
+SPAWN_LOG="$TMP/spawn.log"; rm -f "$SPAWN_LOG" "$TMP/cmux.log"
 cat > "$TMP/handoff_stub.sh" <<STB
 #!/usr/bin/env sh
 printf '%s' "\$1" > "$SPAWN_LOG"
@@ -96,11 +100,27 @@ STB
 chmod +x "$TMP/handoff_stub.sh"
 mk_transcript "$T" "claude-opus-4-8" 350000 "🟢 ready to hand off"
 cout="$(printf '%s' "{\"session_id\":\"cmuxc\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}" | env PATH="$TMP/bin:$PATH" HANDOFF_STATE_DIR="$TMP/state" BD_BIN=bd CMUX_SURFACE_ID=test HANDOFF_SH="$TMP/handoff_stub.sh" bash "$HOOK" 2>/dev/null)"; ccode=$?
-i=0; while [ ! -s "$SPAWN_LOG" ] && [ "$i" -lt 20 ]; do sleep 0.1; i=$((i+1)); done
-if [ "$ccode" = 0 ] && [ -z "$cout" ] && grep -q "Next ready task" "$SPAWN_LOG" 2>/dev/null; then
-  PASS=$((PASS+1)); echo "ok   - C path: in cmux -> direct spawn, no block"
+# wait for the spawn AND the post-success /exit injection (wrapper sleeps ~1s before /exit)
+i=0; while { [ ! -s "$SPAWN_LOG" ] || ! grep -q "/exit" "$TMP/cmux.log" 2>/dev/null; } && [ "$i" -lt 50 ]; do sleep 0.1; i=$((i+1)); done
+if [ "$ccode" = 0 ] && [ -z "$cout" ] && grep -q "Next ready task" "$SPAWN_LOG" 2>/dev/null && grep -q "send --surface test /exit" "$TMP/cmux.log" 2>/dev/null; then
+  PASS=$((PASS+1)); echo "ok   - C path: direct spawn + self /exit on success"
 else
-  FAIL=$((FAIL+1)); echo "FAIL - C path direct spawn (code=$ccode out=$cout log=$(cat "$SPAWN_LOG" 2>/dev/null))"
+  FAIL=$((FAIL+1)); echo "FAIL - C path spawn+exit (code=$ccode out=$cout spawn=$(cat "$SPAWN_LOG" 2>/dev/null) cmux=$(cat "$TMP/cmux.log" 2>/dev/null))"
+fi
+# --- C path failure: handoff.sh rc!=0 -> NO self /exit (don't strand the session) ---
+rm -f "$SPAWN_LOG" "$TMP/cmux.log"
+cat > "$TMP/handoff_fail.sh" <<'STB'
+#!/usr/bin/env sh
+exit 2
+STB
+chmod +x "$TMP/handoff_fail.sh"
+mk_transcript "$T" "claude-opus-4-8" 350000 "🟢 ready to hand off"
+cout2="$(printf '%s' "{\"session_id\":\"cmuxf\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}" | env PATH="$TMP/bin:$PATH" HANDOFF_STATE_DIR="$TMP/state" BD_BIN=bd CMUX_SURFACE_ID=test HANDOFF_SH="$TMP/handoff_fail.sh" bash "$HOOK" 2>/dev/null)"; ccode2=$?
+sleep 2   # give the detached subshell time; on rc!=0 it must NOT send /exit
+if [ "$ccode2" = 0 ] && [ -z "$cout2" ] && ! grep -q "/exit" "$TMP/cmux.log" 2>/dev/null; then
+  PASS=$((PASS+1)); echo "ok   - C path: handoff failure -> no self /exit"
+else
+  FAIL=$((FAIL+1)); echo "FAIL - C path failure leaked /exit (code=$ccode2 out=$cout2 cmux=$(cat "$TMP/cmux.log" 2>/dev/null))"
 fi
 # --- wiring: hooks.json registers a Stop hook pointing at run-hook.cmd stop ---
 HJ="$(cd "$(dirname "$0")" && pwd)/hooks.json"
