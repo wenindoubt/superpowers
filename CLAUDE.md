@@ -156,3 +156,15 @@ bd close <id>         # Complete work
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
+
+<!-- quick-recap: fork-local -->
+## Response Status Footer (fork-local)
+
+End EVERY response that completes a unit of work with a single final status line, per the `quick-recap` skill:
+
+- `🟢 <status>` — finished. Emit ONLY when `superpowers:verification-before-completion` is satisfied (fresh evidence).
+- `🟡 <status>` — a specific non-routine follow-up remains (name it).
+- `🔴 <status>` — blocked on user input.
+
+Under 100 chars, the very last line, nothing after it. The Stop hook reads this line to drive hands-free cmux-handoff: 🟡/🔴 keep the session working; 🟢 + ctx>=30% + ready beads -> a fresh cmux session starts automatically.
+<!-- /quick-recap: fork-local -->
