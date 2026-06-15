@@ -31,7 +31,7 @@ run() {
   local name="$1" eexit="$2" esub="$3" stdin="$4"; shift 4
   mk_bd_stub "$TMP/bin" "${READY:-1}" "${INPROG:-0}"
   local out code
-  out="$(printf '%s' "$stdin" | env PATH="$TMP/bin:$PATH" HANDOFF_STATE_DIR="$TMP/state" BD_BIN=bd "$@" bash "$HOOK" 2>/dev/null)"; code=$?
+  out="$(printf '%s' "$stdin" | env -u CMUX_SURFACE_ID PATH="$TMP/bin:$PATH" HANDOFF_STATE_DIR="$TMP/state" BD_BIN=bd "$@" bash "$HOOK" 2>/dev/null)"; code=$?
   local ok=1
   [ "$code" = "$eexit" ] || ok=0
   if [ -z "$esub" ]; then [ -z "$out" ] || ok=0; else case "$out" in *"$esub"*) : ;; *) ok=0 ;; esac; fi
@@ -81,6 +81,27 @@ READY=1 run "footer 🟡 -> suppress" 0 "" "{\"session_id\":\"fyel\",\"transcrip
 mk_transcript "$T" "claude-opus-4-8" 350000 "🟢 Wired footer-aware handoff"
 READY=1 run "footer 🟢 (body has 🔴🟡) -> still fires" 0 '"decision":"block"' "{\"session_id\":\"fgrn\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
 
+# --- C path: in cmux -> direct spawn via HANDOFF_SH stub, no block on stdout ---
+mk_bd_stub "$TMP/bin" 2 0
+cat > "$TMP/bin/cmux" <<'CMX'
+#!/usr/bin/env bash
+exit 0
+CMX
+chmod +x "$TMP/bin/cmux"
+SPAWN_LOG="$TMP/spawn.log"; rm -f "$SPAWN_LOG"
+cat > "$TMP/handoff_stub.sh" <<STB
+#!/usr/bin/env sh
+printf '%s' "\$1" > "$SPAWN_LOG"
+STB
+chmod +x "$TMP/handoff_stub.sh"
+mk_transcript "$T" "claude-opus-4-8" 350000 "🟢 ready to hand off"
+cout="$(printf '%s' "{\"session_id\":\"cmuxc\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}" | env PATH="$TMP/bin:$PATH" HANDOFF_STATE_DIR="$TMP/state" BD_BIN=bd CMUX_SURFACE_ID=test HANDOFF_SH="$TMP/handoff_stub.sh" bash "$HOOK" 2>/dev/null)"; ccode=$?
+i=0; while [ ! -s "$SPAWN_LOG" ] && [ "$i" -lt 20 ]; do sleep 0.1; i=$((i+1)); done
+if [ "$ccode" = 0 ] && [ -z "$cout" ] && grep -q "Next ready task" "$SPAWN_LOG" 2>/dev/null; then
+  PASS=$((PASS+1)); echo "ok   - C path: in cmux -> direct spawn, no block"
+else
+  FAIL=$((FAIL+1)); echo "FAIL - C path direct spawn (code=$ccode out=$cout log=$(cat "$SPAWN_LOG" 2>/dev/null))"
+fi
 # --- wiring: hooks.json registers a Stop hook pointing at run-hook.cmd stop ---
 HJ="$(cd "$(dirname "$0")" && pwd)/hooks.json"
 if jq -e '.hooks.Stop[0].hooks[0].command | test("run-hook.cmd. stop")' "$HJ" >/dev/null 2>&1; then

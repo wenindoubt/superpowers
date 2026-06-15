@@ -5,6 +5,7 @@ PCT="${HANDOFF_CTX_PCT:-0.30}"
 STATE_DIR="${HANDOFF_STATE_DIR:-$HOME/.claude/cmux-handoff-state}"
 BD_BIN="${BD_BIN:-bd}"
 JQ_BIN="${JQ_BIN:-jq}"
+HANDOFF_SH="${HANDOFF_SH:-$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)/skills/cmux-handoff/scripts/handoff.sh}"
 
 infer_window() {
   if [ -n "${HANDOFF_CTX_WINDOW:-}" ]; then printf '%s' "$HANDOFF_CTX_WINDOW"; return; fi
@@ -65,10 +66,24 @@ main() {
   case "$inprog" in ''|*[!0-9]*) inprog=0 ;; esac     # bd list failed -> treat as clean seam
   [ "$inprog" -eq 0 ] || exit 0                        # mid-task -> wait for a clean seam
 
-  if [ -n "$session" ]; then mkdir -p "$STATE_DIR" 2>/dev/null && : > "$flag" 2>/dev/null; fi
+  [ -n "$session" ] && mkdir -p "$STATE_DIR" 2>/dev/null
   pct_disp="$(awk -v o="$occ" -v w="$window" 'BEGIN{printf "%d",(o*100)/w}')"
   tk_disp="$(awk -v o="$occ" 'BEGIN{printf "%d",o/1000}')"
-  printf '{"decision":"block","reason":"Context at %s%% (~%sk tokens) with ready beads work remaining. Invoke the cmux-handoff skill now (Skill tool: cmux-handoff) to hand off remaining work to a fresh session."}\n' "$pct_disp" "$tk_disp"
+
+  # [C] In cmux with a usable handoff script -> spawn a fresh session directly, no agent round-trip.
+  if [ -n "${CMUX_SURFACE_ID:-}" ] && command -v cmux >/dev/null 2>&1 && [ -x "$HANDOFF_SH" ]; then
+    rj="$("$BD_BIN" ready --json 2>/dev/null)"
+    nid="$(printf '%s' "$rj" | "$JQ_BIN" -r '.[0].id // empty' 2>/dev/null)"
+    ntitle="$(printf '%s' "$rj" | "$JQ_BIN" -r '.[0].title // empty' 2>/dev/null)"
+    seed="Continue work. Next ready task: ${nid} \"${ntitle}\" — claim it (bd update ${nid} --claim), then do it per its bead body."
+    [ -n "$session" ] && : > "$flag" 2>/dev/null
+    nohup sh "$HANDOFF_SH" "$seed" >/dev/null 2>&1 &
+    exit 0
+  fi
+
+  # [A] Fallback: not in cmux -> block and let the agent run cmux-handoff (which has its own non-cmux fallback).
+  [ -n "$session" ] && : > "$flag" 2>/dev/null
+  printf '{"decision":"block","reason":"Context at %s%% (~%sk tokens), clean 🟢 seam, ready beads remain. Invoke the cmux-handoff skill now (Skill tool: cmux-handoff) and hand off WITHOUT asking for confirmation — this is the automatic hands-free path."}\n' "$pct_disp" "$tk_disp"
   exit 0
 }
 main
