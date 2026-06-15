@@ -20,6 +20,7 @@ This skill does two jobs:
 - A long multi-step task just finished and there's a clear "next chunk" remaining.
 - A natural phase boundary (a feature/migration/refactor is done; the next phase is distinct work).
 - The user asks, or runs `/cmux-handoff`.
+- **Hook-triggered (hands-free path):** when the Stop hook invokes this skill (context full + clean 🟢 seam), run the whole workflow autonomously — do NOT ask the user to confirm the handoff. Asking defeats the automatic path.
 
 Don't fire for trivial tasks, or when the remaining work is a quick follow-up you can just finish now. A handoff crosses a *session* boundary — it is not a way to dodge five more minutes of work.
 
