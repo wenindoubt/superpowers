@@ -1,5 +1,13 @@
 # Superpowers Release Notes
 
+## v5.1.7 (2026-06-15) — quick-recap footer drives hands-free handoff (fork-local)
+
+- New fork-local `quick-recap` skill: every response ends with a 🟢/🟡/🔴 status footer (🟢 gated by verification-before-completion).
+- Always-on footer block added to CLAUDE.md (AGENTS.md symlink covers both).
+- Stop hook now reads the footer as a seam signal: 🟡/🔴 suppress handoff (keep working / blocked); 🟢 + ctx≥30% + ready beads → auto-handoff.
+- Auto-handoff is now hands-free: in cmux the hook spawns the fresh session directly (nohup-detached handoff.sh, path C); otherwise it falls back to decision:block → cmux-handoff (path A), which now runs without asking for confirmation.
+- Epic sp-tws, spec sp-86o (extends sp-0wn / sp-dbk). Fork-local only.
+
 ## v5.1.0 (2026-04-30)
 
 ### Removals
