@@ -5,9 +5,13 @@ HOOK="$(cd "$(dirname "$0")" && pwd)/stop"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 PASS=0; FAIL=0
 
-mk_transcript() { # file model occupied  (all tokens in input_tokens)
+mk_transcript() { # file model occupied [footer_line]
   printf '{"type":"user","message":{"role":"user"}}\n' > "$1"
-  printf '{"type":"assistant","message":{"model":"%s","usage":{"input_tokens":%s,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":5}}}\n' "$2" "$3" >> "$1"
+  if [ -n "${4:-}" ]; then
+    printf '{"type":"assistant","message":{"model":"%s","usage":{"input_tokens":%s,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":5},"content":[{"type":"text","text":"body mentions 🔴 🟡 🟢 states\\n%s"}]}}\n' "$2" "$3" "$4" >> "$1"
+  else
+    printf '{"type":"assistant","message":{"model":"%s","usage":{"input_tokens":%s,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":5}}}\n' "$2" "$3" >> "$1"
+  fi
 }
 mk_bd_stub() { # dir ready_count inprog_count
   mkdir -p "$1"
@@ -68,6 +72,14 @@ READY=1 run "first fire writes flag -> FIRE"              0 '"decision":"block"'
 READY=1 run "second stop same session -> exit0 (deduped)" 0 "" "$D1"
 mkdir -p "$TMP/state"; : > "$TMP/state/pref"
 READY=1 run "pre-existing flag -> exit0" 0 "" "{\"session_id\":\"pref\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
+
+# --- footer seam signal (last line only; body mentions all three states) ---
+mk_transcript "$T" "claude-opus-4-8" 350000 "🔴 Need prod API key to continue"
+READY=1 run "footer 🔴 -> suppress" 0 "" "{\"session_id\":\"fred\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
+mk_transcript "$T" "claude-opus-4-8" 350000 "🟡 Code done, set SECRET before testing"
+READY=1 run "footer 🟡 -> suppress" 0 "" "{\"session_id\":\"fyel\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
+mk_transcript "$T" "claude-opus-4-8" 350000 "🟢 Wired footer-aware handoff"
+READY=1 run "footer 🟢 (body has 🔴🟡) -> still fires" 0 '"decision":"block"' "{\"session_id\":\"fgrn\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
 
 # --- wiring: hooks.json registers a Stop hook pointing at run-hook.cmd stop ---
 HJ="$(cd "$(dirname "$0")" && pwd)/hooks.json"

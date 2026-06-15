@@ -22,6 +22,13 @@ last_assistant_usage() {
         | "\($m.model // "unknown") \($occ)" end
   ' "$1" 2>/dev/null
 }
+last_assistant_footer() {
+  "$JQ_BIN" -rs '
+    [ .[] | select(.type=="assistant" and (.message.content != null)) ] as $a
+    | if ($a|length)==0 then empty
+      else ($a[-1].message.content | map(select(.type=="text") | .text // "") | join("\n")) end
+  ' "$1" 2>/dev/null
+}
 main() {
   [ "${HANDOFF_DISABLE:-}" = "1" ] && exit 0
   command -v "$JQ_BIN" >/dev/null 2>&1 || exit 0
@@ -37,6 +44,12 @@ main() {
 
   flag="$STATE_DIR/${session:-unknown}"
   [ -n "$session" ] && [ -e "$flag" ] && exit 0       # already handed off this session
+
+  footer="$(last_assistant_footer "$transcript")"
+  last_line="$(printf '%s\n' "$footer" | awk 'NF{l=$0} END{print l}')"
+  case "$last_line" in
+    *🔴*|*🟡*) exit 0 ;;   # blocked / ongoing -> keep working, recheck next stop
+  esac
 
   mu="$(last_assistant_usage "$transcript")"; [ -n "$mu" ] || exit 0
   model="${mu% *}"; occ="${mu##* }"
