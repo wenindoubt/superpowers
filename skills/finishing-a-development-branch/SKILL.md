@@ -92,6 +92,10 @@ Which option?
 
 **Don't add explanation** - keep options concise.
 
+<!-- no-mistakes-gate: fork-local -->
+Fork-local: the push+PR choice (option 2 above, or option 1 on detached HEAD) can be gated through `/no-mistakes` instead of a raw push — see Step 5 → Option 2.
+<!-- /no-mistakes-gate: fork-local -->
+
 ### Step 5: Execute Choice
 
 #### Option 1: Merge Locally
@@ -126,6 +130,24 @@ git push -u origin <feature-branch>
 ```
 
 **Do NOT clean up worktree** — user needs it alive to iterate on PR feedback.
+
+<!-- no-mistakes-gate: fork-local -->
+**Fork-local — gated push (preferred for option 2):** instead of a raw `git push` + hand-written PR, route this through the `/no-mistakes` gate. It runs the committed branch through a disposable-worktree pipeline (review → test → docs → lint), forwards to the push target only when every check is green, and opens a clean PR for you.
+
+```bash
+# Gate the already-committed branch, then it pushes + opens the PR:
+/no-mistakes
+
+# If the `no-mistakes` binary is missing, install once (standalone tool, NOT
+# bundled with superpowers), then initialize the repo:
+curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | sh
+no-mistakes init                          # keeps origin -> your real remote
+# Working on a fork? keep origin on the parent and point the gate at your fork:
+no-mistakes init --fork-url <your-fork-url>
+```
+
+Still your call — use the gate for a clean PR, or the plain `git push` above. Either way, **do NOT clean up the worktree** until the resulting PR is merged.
+<!-- /no-mistakes-gate: fork-local -->
 
 #### Option 3: Keep As-Is
 
