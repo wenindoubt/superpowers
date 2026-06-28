@@ -131,7 +131,7 @@ If `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set, run the approach-exploration s
       bd note "$DECISION" "Research Findings: <findings + source URLs + retrieval date>"
 
 - Record the decision bead ID — writing-plans needs it for `--spec-id`.
-- The auto-exported `.beads/issues.jsonl` is the committed artifact: `git add .beads/issues.jsonl && git commit -m "docs(spec): <topic> decision bead (bd-<id>)"`.
+- The decision bead lives in the local Dolt DB — do **not** `git add .beads/` or `issues.jsonl` (Dolt-native, gitignored). Publish it with `bd dolt push` (→ `refs/dolt/data`); see `skills/_shared/beads-workflow.md` → Remote sync.
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
