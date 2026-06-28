@@ -72,18 +72,7 @@ digraph brainstorming {
 ## Team Mode (experimental)
 <!-- superpowers-teams: fork-local -->
 
-If `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set, run the approach-exploration step (checklist 5) as a team instead of solo, deepening the design with parallel, cross-challenging perspectives.
-
-**When the flag is set, always spawn a team** — even if the topic seems small. Spawn after clarifying questions + the web-research pass, before converging on a design.
-
-**REQUIRED SUB-SKILL:** Use superpowers:dispatching-parallel-agents for how to scope and dispatch the teammates concurrently.
-
-- Lead decides team size and roles from the topic (e.g. UX, technical architecture, devil's advocate).
-- Each teammate explores its angle and actively challenges the others' (scientific-debate style).
-- Lead synthesizes the debate into the 2-3 approaches and the design presented to the user.
-- All gates still apply unchanged: the HARD-GATE, per-section user approval, spec write, user review, and the writing-plans handoff.
-
-If the flag is NOT set, ignore this section and run the steps below solo.
+If `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set, run the approach-exploration step (checklist 5) as a cross-challenging team rather than solo — see `skills/_shared/team-mode.md` (brainstorming variant). If the flag is unset, ignore this and run the steps below solo.
 
 ## The Process
 
