@@ -16,6 +16,23 @@ ledger and the tool results carry the record.
 
 **Continuous execution:** Do not pause to check in with your human partner between tasks. Execute all tasks from the plan without stopping. The only reasons to stop are: BLOCKED status you cannot resolve, ambiguity that genuinely prevents progress, or all tasks complete. "Should I continue?" prompts and progress summaries waste their time — they asked you to execute the plan, so execute it.
 
+<!-- beads-native: fork-local -->
+## Task source: beads
+
+The plan is an epic + task beads (see `skills/_shared/beads-workflow.md`), not a markdown file. The controller loop:
+
+    bd ready --parent "$EPIC" --json     # next unblocked task(s), priority-ordered
+    bd update "$TASK" --claim            # claim before dispatching
+    # → dispatch fresh implementer subagent with the bead BODY as the task text
+    #   (bd show "$TASK" --json | jq -r '.[0].description')
+    # → spec review, then code-quality review (unchanged)
+    bd close "$TASK" --reason "<summary>"   # ONLY after the subagent has git push-ed
+    # repeat until: bd ready --parent "$EPIC" --json  → empty
+
+Every "Mark task complete in TodoWrite" step below means `bd close <id> --reason "..."`.
+Discovered work → `bd create ... --deps discovered-from:<task-id>` (do not silently expand scope).
+If beads is unavailable in this repo, fall back to reading a plan markdown file.
+
 ## When to Use
 
 ```dot
@@ -373,6 +390,8 @@ Done!
 - Dispatch multiple implementation subagents in parallel (conflicts)
 - Make a subagent read the whole plan file (hand it its task brief —
   `scripts/task-brief` — instead)
+- Make a subagent run bd commands — the controller claims the bead and hands its body as the task brief <!-- beads-native: fork-local -->
+- Close a task bead before the implementer's work is git push-ed <!-- beads-native: fork-local -->
 - Skip scene-setting context (subagent needs to understand where task fits)
 - Ignore subagent questions (answer before letting them proceed)
 - Accept "close enough" on spec compliance (reviewer found spec issues = not done)

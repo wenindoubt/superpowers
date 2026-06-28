@@ -47,7 +47,11 @@ Subagent (general-purpose):
     risk, and name both the risk and what you checked in your report.
     Cross-cutting changes are legitimate named risks: if the diff changes
     lock ordering, a function or API contract, or shared mutable state,
-    checking the call sites is the right method.
+    checking the call sites is the right method. When such a named-risk
+    check does send you outside the diff, prefer `codebase-memory-mcp`
+    tools if available (`search_graph`, `trace_path`, `get_code_snippet`,
+    `search_code`) over Read/Grep — faster and more accurate for call
+    chains; fall back to Grep/Glob/Read if the repo isn't indexed.
 
     Your review is read-only on this checkout. Do not mutate the working
     tree, the index, HEAD, or branch state in any way.

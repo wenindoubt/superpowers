@@ -5,6 +5,16 @@ description: "You MUST use this before any creative work - creating features, bu
 
 # Brainstorming Ideas Into Designs
 
+## First action: beads check (scripted, not judgment)
+
+Before anything else, run this — do NOT decide by feel:
+
+```bash
+command -v bd >/dev/null 2>&1 && echo "BEADS PRESENT: the spec is a decision bead, not markdown" || echo "no beads: markdown fallback"
+```
+
+If `bd` is present, the design/spec is a **decision bead** (run the ask-first preflight in `skills/_shared/beads-workflow.md`), NOT a `docs/superpowers/specs/*.md` file. The `beads-preflight` PreToolUse hook blocks the first attempt to Write a superpowers spec markdown while `bd` is available — that block is the reminder to create the bead first. Only fall back to markdown if the human declined beads.
+
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 
 Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
@@ -24,11 +34,11 @@ You MUST create a task for each of these items and complete them in order:
 1. **Explore project context** — check files, docs, recent commits
 2. **Offer the visual companion just-in-time** — NOT upfront. The first time a question would genuinely be clearer shown than described, offer it then (its own message); on approval its browser tab opens for you. If no visual question ever arises, never offer it. See the Visual Companion section below.
 3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
-4. **Propose 2-3 approaches** — with trade-offs and your recommendation
-5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
-7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-8. **User reviews written spec** — ask user to review the spec file before proceeding
+4. **Mandatory web-research pass** — dispatch kiln-web-search-researcher on external unknowns before proposing approaches (see Mandatory Web-Research Pass below)
+5. **Propose 2-3 approaches** — with trade-offs and your recommendation
+6. **Present design** — in sections scaled to their complexity, get user approval after each section
+7. **Write the design** — as a `decision` bead (beads-native; markdown fallback if beads declined). See "After the Design". <!-- beads-native: fork-local -->
+8. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
 ## Process Flow
@@ -37,28 +47,43 @@ You MUST create a task for each of these items and complete them in order:
 digraph brainstorming {
     "Explore project context" [shape=box];
     "Ask clarifying questions" [shape=box];
+    "Mandatory web-research pass" [shape=box];
     "Propose 2-3 approaches" [shape=box];
     "Present design sections" [shape=box];
     "User approves design?" [shape=diamond];
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
-    "User reviews spec?" [shape=diamond];
     "Invoke writing-plans skill" [shape=doublecircle];
 
     "Explore project context" -> "Ask clarifying questions";
-    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Ask clarifying questions" -> "Mandatory web-research pass";
+    "Mandatory web-research pass" -> "Propose 2-3 approaches";
     "Propose 2-3 approaches" -> "Present design sections";
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
     "User approves design?" -> "Write design doc" [label="yes"];
     "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "User reviews spec?";
-    "User reviews spec?" -> "Write design doc" [label="changes requested"];
-    "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
+    "Spec self-review\n(fix inline)" -> "Invoke writing-plans skill";
 }
 ```
 
 **The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+
+## Team Mode (experimental)
+<!-- superpowers-teams: fork-local -->
+
+If `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set, run the approach-exploration step (checklist 5) as a team instead of solo, deepening the design with parallel, cross-challenging perspectives.
+
+**When the flag is set, always spawn a team** — even if the topic seems small. Spawn after clarifying questions + the web-research pass, before converging on a design.
+
+**REQUIRED SUB-SKILL:** Use superpowers:dispatching-parallel-agents for how to scope and dispatch the teammates concurrently.
+
+- Lead decides team size and roles from the topic (e.g. UX, technical architecture, devil's advocate).
+- Each teammate explores its angle and actively challenges the others' (scientific-debate style).
+- Lead synthesizes the debate into the 2-3 approaches and the design presented to the user.
+- All gates still apply unchanged: the HARD-GATE, per-section user approval, spec write, user review, and the writing-plans handoff.
+
+If the flag is NOT set, ignore this section and run the steps below solo.
 
 ## The Process
 
@@ -95,7 +120,8 @@ digraph brainstorming {
 
 **Working in existing codebases:**
 
-- Explore the current structure before proposing changes. Follow existing patterns.
+<!-- codebase-memory-mcp: fork-local -->
+- Explore the current structure before proposing changes. Follow existing patterns. If `codebase-memory-mcp` tools are available, prefer them for this exploration — faster, more token-efficient, more accurate: `get_architecture` (structure overview), `search_graph` (find funcs/classes/routes), `trace_path` (call chains / data flow), `get_code_snippet` (read source by qualified name), `search_code` (graph-augmented grep). If the repo isn't indexed, run `index_repository` first (`index_status` to check). Fall back to Grep/Glob/Read for text/config/unindexed code.
 - Where existing code has problems that affect the work (e.g., a file that's grown too large, unclear boundaries, tangled responsibilities), include targeted improvements as part of the design - the way a good developer improves code they're working in.
 - Don't propose unrelated refactoring. Stay focused on what serves the current goal.
 
@@ -103,10 +129,20 @@ digraph brainstorming {
 
 **Documentation:**
 
-- Write the validated design (spec) to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
-  - (User preferences for spec location override this default)
-- Use elements-of-style:writing-clearly-and-concisely skill if available
-- Commit the design document to git
+<!-- beads-native: fork-local -->
+- **Run the ask-first preflight** in `skills/_shared/beads-workflow.md`. If the human declines beads, fall back to writing `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` (user preferences for spec location override this default), use elements-of-style:writing-clearly-and-concisely if available, commit it, and skip the rest of this block.
+- Otherwise write the validated design as a **decision bead** (do NOT write a spec markdown file):
+
+      DECISION=$(bd create --type decision --title "<topic>" \
+        --description=- \
+        --design "<chosen approach + key tradeoffs>" --silent <<'SPEC'
+      <the full spec body: goal, architecture, components, data flow, error handling, testing>
+      SPEC
+      )
+      bd note "$DECISION" "Research Findings: <findings + source URLs + retrieval date>"
+
+- Record the decision bead ID — writing-plans needs it for `--spec-id`.
+- The auto-exported `.beads/issues.jsonl` is the committed artifact: `git add .beads/issues.jsonl && git commit -m "docs(spec): <topic> decision bead (bd-<id>)"`.
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
@@ -118,17 +154,32 @@ After writing the spec document, look at it with fresh eyes:
 
 Fix any issues inline. No need to re-review — just fix and move on.
 
-**User Review Gate:**
-After the spec review loop passes, ask the user to review the written spec before proceeding:
-
-> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
-
-Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
-
 **Implementation:**
 
-- Invoke the writing-plans skill to create a detailed implementation plan
+- Invoke the writing-plans skill to create a detailed implementation plan; pass it the decision bead ID (`$DECISION`) so the epic links via `--spec-id`. <!-- beads-native: fork-local -->
 - Do NOT invoke any other skill. writing-plans is the next step.
+
+## Mandatory Web-Research Pass
+
+After clarifying questions and BEFORE proposing approaches, always run a web-research pass so the design is built on verified, current facts.
+
+Dispatch the researcher:
+
+    Agent(
+      subagent_type: "kiln-web-search-researcher",
+      description: "research <topic>",
+      prompt: "We are designing: <scoped topic from the clarifying questions>.
+               Research these external unknowns: <APIs / libraries / versions / best practices the design depends on>.
+               Return: conclusions, current stable versions, known gotchas, and source URLs.
+               If no external facts apply to this task, reply exactly 'no external research needed' and stop."
+    )
+
+- Dispatch multiple researchers in parallel when the unknowns are independent.
+- Fold the conclusions into the dialogue — let them shape the 2-3 approaches.
+- If the researcher returns "no external research needed", continue and record that in the spec.
+- If the researcher fails/times out, tell the user and proceed with the assumption flagged explicitly.
+- When writing the design doc, add a `## Research Findings` section listing each finding with its source URL and retrieval date, or "No external research required for this task."
+- **High-stakes unknowns — auto-escalate.** After the kiln pass returns, if an unknown is high-stakes (architecture-deciding / contested / costly-if-wrong) and `/deep-research` is available, auto-escalate it per `skills/brainstorming/deep-research-escalation.md` — announce and invoke, no user prompt. <!-- deep-research-escalation: fork-local -->
 
 ## Key Principles
 

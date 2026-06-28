@@ -45,6 +45,21 @@ Dispatch a `general-purpose` subagent, filling the template at [code-reviewer.md
 - Note Minor issues for later
 - Push back if reviewer is wrong (with reasoning)
 
+## Team Mode (experimental)
+<!-- superpowers-teams: fork-local -->
+
+If `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set, run the review as a team of distinct-lens reviewers instead of a single reviewer subagent.
+
+**When the flag is set, always spawn a team** — even for a small diff.
+
+**REQUIRED SUB-SKILL:** Use superpowers:dispatching-parallel-agents for how to scope and dispatch the reviewers concurrently.
+
+- Lead decides team size and lenses from the diff (e.g. security, performance, correctness, test coverage).
+- Each reviewer evaluates the same `BASE_SHA..HEAD_SHA` range through its lens; they debate overlaps and disagreements directly.
+- Lead merges findings into one report with the usual Critical/Important/Minor severities, then act on feedback as in step 3 above.
+
+If the flag is NOT set, ignore this section and dispatch the single reviewer subagent as described above.
+
 ## Example
 
 ```

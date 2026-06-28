@@ -51,6 +51,9 @@ You MUST complete each phase before proceeding to the next.
 
 **BEFORE attempting ANY fix:**
 
+<!-- codebase-memory-mcp: fork-local -->
+**Locating code during investigation:** If `codebase-memory-mcp` tools are available, prefer them for tracing the bug — faster, more token-efficient, more accurate: `search_graph` (find the failing func/class/route), `trace_path` (call chains / data flow to follow how a value reaches the failure), `get_code_snippet` (read source by qualified name), `get_architecture` (structure), `search_code` (graph-augmented grep). If the repo isn't indexed, run `index_repository` first (`index_status` to check). Fall back to Grep/Glob/Read for text/config/unindexed code.
+
 1. **Read Error Messages Carefully**
    - Don't skip past errors or warnings
    - They often contain the exact solution
@@ -211,6 +214,22 @@ You MUST complete each phase before proceeding to the next.
    **Discuss with your human partner before attempting more fixes**
 
    This is NOT a failed hypothesis - this is a wrong architecture.
+
+## Team Mode (experimental)
+<!-- superpowers-teams: fork-local -->
+
+If `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set, run Phase 3 as a competing-hypotheses team instead of forming a single hypothesis. This fights anchoring — one agent tends to find one plausible cause and stop looking.
+
+**When the flag is set, always spawn a team** — even if the bug seems simple. Spawn after Phase 1 reproduction is confirmed, before locking a root cause.
+
+**REQUIRED SUB-SKILL:** Use superpowers:dispatching-parallel-agents for how to scope and dispatch the hypothesis agents concurrently.
+
+- Lead decides team size from the candidate causes; each teammate owns one hypothesis.
+- Teammates investigate in parallel and actively try to disprove each other (scientific debate). The hypothesis that survives is the root cause.
+- Lead carries the surviving hypothesis into Phase 4 (failing test → single fix → verify), unchanged.
+- The Iron Law still holds: no fixes until root cause is found.
+
+If the flag is NOT set, ignore this section and follow Phase 3 solo.
 
 ## Red Flags - STOP and Follow Process
 

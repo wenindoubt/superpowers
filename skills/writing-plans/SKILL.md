@@ -5,6 +5,16 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 # Writing Plans
 
+## First action: beads check (scripted, not judgment)
+
+Before anything else, run this — do NOT decide by feel:
+
+```bash
+command -v bd >/dev/null 2>&1 && echo "BEADS PRESENT: plans are beads, not markdown" || echo "no beads: markdown fallback"
+```
+
+If `bd` is present, the plan is an **epic bead + task beads** (run the ask-first preflight in `skills/_shared/beads-workflow.md`), NOT a `docs/superpowers/plans/*.md` file. The `beads-preflight` PreToolUse hook blocks the first attempt to Write a superpowers plan markdown while `bd` is available — that block is the reminder to create the beads first. Only fall back to markdown if the human declined beads.
+
 ## Overview
 
 Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
@@ -15,8 +25,18 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated worktree, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-- (User preferences for plan location override this default)
+<!-- beads-native: fork-local -->
+**Save plans as beads** (run the ask-first preflight in `skills/_shared/beads-workflow.md` first):
+
+    EPIC=$(bd create --type epic --title "<feature>" --silent -d - <<'GOAL'
+    Goal: <one sentence>
+    Architecture: <2-3 sentences>
+    Tech Stack: <key tech>
+    GOAL
+    )
+    bd update "$EPIC" --spec-id "$DECISION"   # decision bead ID from brainstorming, if present
+
+If the human declined beads, fall back to `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md` (user preferences for plan location override this default).
 
 ## Scope Check
 
@@ -25,6 +45,9 @@ If the spec covers multiple independent subsystems, it should have been broken i
 ## File Structure
 
 Before defining tasks, map out which files will be created or modified and what each one is responsible for. This is where decomposition decisions get locked in.
+
+<!-- codebase-memory-mcp: fork-local -->
+When mapping an existing codebase, if `codebase-memory-mcp` tools are available, prefer them over reading files — faster, more token-efficient, more accurate: `get_architecture` (structure / packages), `search_graph` (find funcs/classes/routes), `trace_path` (call chains / data flow), `get_code_snippet` (read source by qualified name), `search_code` (graph-augmented grep). If the repo isn't indexed, run `index_repository` first (`index_status` to check). Fall back to Grep/Glob/Read for text/config/unindexed code.
 
 - Design units with clear boundaries and well-defined interfaces. Each file should have one clear responsibility.
 - You reason best about code you can hold in context at once, and your edits are more reliable when files are focused. Prefer smaller, focused files over large ones that do too much.
@@ -77,6 +100,30 @@ include this section.]
 ```
 
 ## Task Structure
+
+<!-- beads-native: fork-local -->
+**Each task = one `task` bead** (not a markdown section). The 5 TDD steps + code blocks go in the bead BODY as a checklist — never as separate beads.
+
+    T=$(bd create --type task --parent "$EPIC" --title "<task name>" \
+      --acceptance "tests pass + committed" --silent --description=- <<'BODY'
+    ### Files
+    - Create: <path>   - Modify: <path:lines>   - Test: <path>
+
+    - [ ] Step 1: Write the failing test
+    <test code>
+    - [ ] Step 2: Run it, verify it fails — `<cmd>` → FAIL
+    - [ ] Step 3: Minimal implementation
+    <impl code>
+    - [ ] Step 4: Run it, verify it passes — `<cmd>` → PASS
+    - [ ] Step 5: Commit (include "(bd-<this-id>)" in the message)
+    BODY
+    )
+
+Wire ordering with dependencies (a task that must follow another):
+
+    bd dep add "$T_later" "$T_earlier" --type blocks
+
+The markdown structure below now describes the **bead body** content (Files + bite-sized steps):
 
 ````markdown
 ### Task N: [Component Name]
@@ -141,6 +188,27 @@ Every step must contain the actual content an engineer needs. These are **plan f
 - Exact commands with expected output
 - DRY, YAGNI, TDD, frequent commits
 
+## Mandatory Web-Research Pass
+
+After mapping the File Structure and BEFORE finalizing tasks that depend on external APIs/libraries/config, always run a web-research pass to verify those dependencies.
+
+Dispatch the researcher:
+
+    Agent(
+      subagent_type: "kiln-web-search-researcher",
+      description: "verify plan deps",
+      prompt: "Implementation plan for: <feature>.
+               Verify these external dependencies the plan relies on: <exact APIs / signatures / config keys / versions>.
+               Return: confirmed signatures/usage, current stable versions, breaking-change or deprecation warnings, and source URLs.
+               If the plan has no external dependencies, reply exactly 'no external research needed' and stop."
+    )
+
+- Use confirmed facts in the task code blocks (no placeholders).
+- If "no external research needed", continue normally and note that in the plan header.
+- On researcher failure, tell the user and flag the unverified dependency in the plan.
+- Cite verified facts (with source URLs) inline where each external dependency is first used.
+- **High-stakes deps — auto-escalate.** After the kiln pass returns, if a dependency choice is high-stakes (architecture-deciding / contested / costly-if-wrong) and `/deep-research` is available, auto-escalate it per `skills/brainstorming/deep-research-escalation.md` — announce and invoke, no user prompt. <!-- deep-research-escalation: fork-local -->
+
 ## Self-Review
 
 After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a checklist you run yourself — not a subagent dispatch.
@@ -155,20 +223,9 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Execution Handoff
 
-After saving the plan, offer execution choice:
+After saving the plan, default to Subagent-Driven execution. Do not ask which approach — proceed directly.
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+**"Plan complete: epic `$EPIC` with N task beads. Executing Subagent-Driven: fresh subagent per ready task, review between tasks."** <!-- beads-native: fork-local -->
 
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
-
-**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
-
-**Which approach?"**
-
-**If Subagent-Driven chosen:**
 - **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
 - Fresh subagent per task + two-stage review
-
-**If Inline Execution chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
-- Batch execution with checkpoints for review

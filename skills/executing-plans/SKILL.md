@@ -15,19 +15,22 @@ Load plan, review critically, execute all tasks, report when complete.
 
 ## The Process
 
-### Step 1: Load and Review Plan
-1. Read plan file
-2. Review critically - identify any questions or concerns about the plan
-3. If concerns: Raise them with your human partner before starting
-4. If no concerns: Create todos for the plan items and proceed
+<!-- beads-native: fork-local -->
+The plan is an epic + task beads, not a markdown file — see `skills/_shared/beads-workflow.md` for the bead model.
 
-### Step 2: Execute Tasks
+### Step 1: Load and review the epic
+1. `bd show "$EPIC" --json` and `bd ready --parent "$EPIC" --json` — review the work critically
+2. Concerns → raise with your human partner before starting
 
-For each task:
-1. Mark as in_progress
-2. Follow each step exactly (plan has bite-sized steps)
-3. Run verifications as specified
-4. Mark as completed
+### Step 2: Execute tasks
+For each ready task:
+1. `bd update <id> --claim`
+2. Read the bead body (`bd show <id> --json`) and follow its bite-sized steps exactly
+3. Run the verifications in the body
+4. `bd close <id> --reason "..."` — only after `git push`
+5. Loop until `bd ready --parent "$EPIC" --json` is empty
+
+(If beads is unavailable in this repo, fall back to reading a plan markdown file: read it, create TodoWrite, follow each task's bite-sized steps.)
 
 ### Step 3: Complete Development
 

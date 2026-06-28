@@ -2,6 +2,8 @@
 
 Use this template when dispatching an implementer subagent.
 
+<!-- codebase-memory-mcp: fork-local — the "Exploring the Codebase" block inside the prompt below is fork-local guidance -->
+
 ```
 Subagent (general-purpose):
   description: "Implement Task N: [task name]"
@@ -59,6 +61,15 @@ Subagent (general-purpose):
       and note it as a concern in your report
     - In existing codebases, follow established patterns. Improve code you're touching
       the way a good developer would, but don't restructure things outside your task.
+
+    ## Exploring the Codebase
+
+    If `codebase-memory-mcp` tools are available, prefer them over reading files for
+    code discovery — faster, more token-efficient, more accurate: `search_graph` (find
+    funcs/classes/routes), `trace_path` (call chains / data flow), `get_code_snippet`
+    (read source by qualified name), `get_architecture` (structure), `search_code`
+    (graph-augmented grep). If the repo isn't indexed, run `index_repository` first
+    (`index_status` to check). Fall back to Grep/Glob/Read for text/config/unindexed code.
 
     ## When You're in Over Your Head
 
