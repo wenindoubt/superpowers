@@ -19,19 +19,22 @@ ledger and the tool results carry the record.
 <!-- beads-native: fork-local -->
 ## Task source: beads
 
-The plan is an epic + task beads (see `skills/_shared/beads-workflow.md`), not a markdown file. The controller loop:
+The plan is an epic + task beads (see `skills/_shared/beads-workflow.md`), not a markdown file. The bead IS the task brief; it rides SP6's file-based handoff (never pasted through the controller's context). The controller loop:
 
     bd ready --parent "$EPIC" --json     # next unblocked task(s), priority-ordered
     bd update "$TASK" --claim            # claim before dispatching
-    # → dispatch fresh implementer subagent with the bead BODY as the task text
-    #   (bd show "$TASK" --json | jq -r '.[0].description')
-    # → spec review, then code-quality review (unchanged)
+    scripts/task-brief-bead "$TASK"      # bead body → <sdd-workspace>/task-<TASK>-brief.md
+    # → dispatch fresh implementer subagent pointed at that brief file (+ report path + context)
+    # → dispatch the task reviewer with scripts/review-package BASE HEAD (unchanged)
     bd close "$TASK" --reason "<summary>"   # ONLY after the subagent has git push-ed
     # repeat until: bd ready --parent "$EPIC" --json  → empty
 
+`scripts/task-brief-bead <id>` is the beads counterpart to `scripts/task-brief PLAN_FILE N` —
+it writes the bead's text to the same brief file the implementer reads, so the bead body
+never sits in the controller's context.
 Every "Mark task complete in TodoWrite" step below means `bd close <id> --reason "..."`.
 Discovered work → `bd create ... --deps discovered-from:<task-id>` (do not silently expand scope).
-If beads is unavailable in this repo, fall back to reading a plan markdown file.
+If beads is unavailable in this repo, fall back to a plan markdown file with `scripts/task-brief PLAN_FILE N`.
 
 ## When to Use
 
@@ -241,7 +244,9 @@ and is re-read on every later turn. Hand artifacts over as files:
 
 - **Task brief:** before dispatching an implementer, run this skill's
   `scripts/task-brief PLAN_FILE N` — it extracts the task's full text to a
-  uniquely named file and prints the path. Compose the dispatch so the
+  uniquely named file and prints the path. (Beads mode: use
+  `scripts/task-brief-bead <id>` instead — same brief file, sourced from the
+  claimed bead. <!-- beads-native: fork-local -->) Compose the dispatch so the
   brief stays the single source of requirements. Your dispatch should
   contain: (1) one line on where this task fits in the project; (2) the
   brief path, introduced as "read this first — it is your requirements,
