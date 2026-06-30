@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Stop hook — auto-trigger cmux-handoff when ready beads work remains (per-bead loop).
 # Spec: bd sp-dbk + sp-4y7. FAIL-OPEN: any missing dep / parse error exits 0 (never traps a session).
-# Per-bead default: HANDOFF_CTX_PCT=0 -> every 🟢 seam hands off regardless of context, so the
-# session chain loops through `bd ready` one bead per fresh session. Brakes: empty bd ready,
-# footer 🟡/🔴, in_progress!=0, HANDOFF_DISABLE=1. Set HANDOFF_CTX_PCT=0.30 to restore a ctx gate.
-PCT="${HANDOFF_CTX_PCT:-0}"
+# Ctx-gated default: HANDOFF_CTX_PCT=0.30 -> a session packs ready beads until context >=30%, then
+# hands off at the next 🟢 seam, looping through `bd ready` across fresh sessions. Brakes: empty bd
+# ready, footer 🟡/🔴, in_progress!=0, HANDOFF_DISABLE=1. Set HANDOFF_CTX_PCT=0 for per-bead (every
+# seam hands off); HANDOFF_DISABLE=1 to turn the loop off entirely.
+PCT="${HANDOFF_CTX_PCT:-0.30}"
 STATE_DIR="${HANDOFF_STATE_DIR:-$HOME/.claude/cmux-handoff-state}"
 BD_BIN="${BD_BIN:-bd}"
 JQ_BIN="${JQ_BIN:-jq}"
@@ -82,7 +83,7 @@ main() {
     rj="$("$BD_BIN" ready --json 2>/dev/null)"
     nid="$(printf '%s' "$rj" | "$JQ_BIN" -r '.[0].id // empty' 2>/dev/null)"
     ntitle="$(printf '%s' "$rj" | "$JQ_BIN" -r '.[0].title // empty' 2>/dev/null)"
-    seed="Continue work. Next ready task: ${nid} \"${ntitle}\" — claim it (bd update ${nid} --claim), then do it per its bead body."
+    seed="Continue work. If codebase-memory-mcp is available, first refresh the index (detect_changes; re-index if stale), then use it to explore. Next ready task: ${nid} \"${ntitle}\" — claim it (bd update ${nid} --claim), then do it per its bead body."
     [ -n "$session" ] && : > "$flag" 2>/dev/null
     nohup sh -c '
       hs=$1; seed=$2; surf=$3

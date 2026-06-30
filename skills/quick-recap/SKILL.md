@@ -16,17 +16,22 @@ Every response that completes a unit of work must end with a single final line:
 
 Rules:
 - Under 100 characters, at the very END of the response, nothing after it (no ---, no spacer line).
-- 🟢 work finished. 🟡 non-routine follow-up remains (name it). 🔴 blocked on user input.
-- Emit 🟢 ONLY when superpowers:verification-before-completion is satisfied (fresh evidence). Never rubber-stamp green.
+- 🟢 this unit verified-done. Use 🟢 ALSO for a **soft stall**: you have a non-blocking question or are unsure what's next, but `bd ready` has obvious work and your question changes neither *which* task is next nor *how* to do it — note the question on the bead and let the loop carry it to `bd ready[0]`.
+- 🟡 a non-routine follow-up remains that THIS session should finish (name it) — keeps the session working.
+- 🔴 **hard blocker only**: a decision only your human can make, where guessing risks slop. Flag it with `bd human <id>` so it's durable, then stop. Do NOT reach for 🔴 just because you have a question — see the soft-stall rule above.
+- Emit 🟢 ONLY when superpowers:verification-before-completion is satisfied for the unit you just finished (fresh evidence). Never rubber-stamp green.
 
 ## Why the footer matters here (fork-local)
 
 The Stop hook (hooks/stop) reads the LAST line of your final message:
-- 🔴 / 🟡 -> handoff suppressed (blocked / ongoing — keep working, recheck later).
-- 🟢 -> clean seam; if ready beads remain (per-bead default: no ctx gate), a fresh cmux session is
-  spawned on the next `bd ready` bead and THIS session runs `/exit` — an unbounded loop through ready
-  work, one bead per fresh context. (Restore a ctx gate with `HANDOFF_CTX_PCT=0.30`; full off-switch
-  is `HANDOFF_DISABLE=1`.)
+- 🔴 -> hard blocker (human-only decision) -> handoff suppressed; `bd human`-flag it and stop.
+- 🟡 -> THIS session keeps working (mid-task follow-up) -> suppressed, recheck at next stop.
+- 🟢 -> clean seam; once context ≥ `HANDOFF_CTX_PCT` (default `0.30` in `hooks/stop`) and ready beads
+  remain, a fresh cmux session is spawned on the next `bd ready` bead — refreshing the codebase index
+  first — and THIS session runs `/exit`. A loop through ready work that self-terminates when `bd ready`
+  empties or a 🔴 hard blocker lands. Because a soft stall is 🟢, a non-blocking "what next?" advances
+  the loop instead of waiting on the human. (`HANDOFF_CTX_PCT=0` = per-bead, every seam;
+  `HANDOFF_DISABLE=1` = off.)
 
 An inaccurate footer mis-drives that automation. Choose the color from the user's perspective: finished, pending-a-specific-step, or blocked.
 

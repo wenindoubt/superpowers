@@ -46,9 +46,11 @@ run "loop guard stop_hook_active"  0 "" "{\"session_id\":\"s1\",\"transcript_pat
 run "missing transcript path"      0 "" "{\"session_id\":\"s1\",\"stop_hook_active\":false}"
 run "unreadable transcript"        0 "" "{\"session_id\":\"s1\",\"transcript_path\":\"$TMP/nope.jsonl\",\"stop_hook_active\":false}"
 run "below explicit 30% gate (5% of 1M)" 0 "" "$S" HANDOFF_CTX_PCT=0.30
-# --- per-bead default (PCT=0): any occupancy fires, no ctx gate ---
+# --- default is now the 30% ctx gate: 5% occupancy does NOT fire ---
 mk_transcript "$T" "claude-opus-4-8" 50000   # 5% of 1M
-READY=1 run "per-bead default 5% -> FIRE" 0 '"decision":"block"' "{\"session_id\":\"fpb\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
+READY=1 run "default 0.30 gate, 5% -> NO fire" 0 "" "{\"session_id\":\"fpb\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}"
+# --- per-bead opt-in (HANDOFF_CTX_PCT=0): any occupancy fires, no ctx gate ---
+READY=1 run "per-bead opt-in (PCT=0) 5% -> FIRE" 0 '"decision":"block"' "{\"session_id\":\"fpb0\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}" HANDOFF_CTX_PCT=0
 # --- ready check ---
 mk_transcript "$T" "claude-opus-4-8" 350000   # 35% of 1M
 READY=0 run "over threshold but no ready -> exit0" 0 "" "$S"

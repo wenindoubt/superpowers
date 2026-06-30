@@ -67,8 +67,11 @@ If you're unsure whether something works, say so on the bead rather than asserti
   - **A bead is ready** → name *that concrete bead* in a one-line seed prompt (it's self-contained: steps + acceptance live in its body):
 
     ```
-    Continue epic <epic-id>. Next ready task: <next-id> "<title>" — claim it (`bd update <next-id> --claim`), then do it per its bead body. <If a note was pinned: stop-context is in the note on <in-progress-id>.>
+    Continue epic <epic-id>. If codebase-memory-mcp is available, first refresh the index (`detect_changes`; re-run `index_repository` if stale), then use it to explore. Next ready task: <next-id> "<title>" — claim it (`bd update <next-id> --claim`), then do it per its bead body. <If a note was pinned: stop-context is in the note on <in-progress-id>.>
     ```
+
+    <!-- codebase-memory-mcp: fork-local -->
+    **Refresh-then-traverse.** A handoff means code changed, so the new session's index is stale — the SessionStart "Code Discovery Protocol" hook only indexes when a repo is *unindexed*, never refreshes a stale one. So the seed prompt above tells the fresh session to `detect_changes` and re-`index_repository` (only if stale) before traversing via `search_graph`/`trace_path`/`get_code_snippet`. Gate on availability — drop the clause if codebase-memory-mcp isn't in play. **Verbatim user prompts (above) stay verbatim — don't inject the refresh; the new session's normal indexing covers it.**
 
   - **Nothing ready but open beads remain** → they're blocked. Seed `unblock <id>: <blocker>`, not new feature work.
   - **Nothing ready, no open beads** → the epic is **done**. Don't spawn a session for nothing — tell the human the epic is complete and **stop here**.
@@ -88,7 +91,7 @@ Run the script (skill-relative path) with the seed prompt as a **single quoted a
 **Graceful fallback — not in cmux (`CMUX_SURFACE_ID` unset):** you've still done the brain (closure done, next work resolved, any note pinned). Skip the spawn and hand the human the *concrete* next step to paste into a fresh session:
 
 ```
-New session, next: <next-id> "<title>" — bd update <next-id> --claim, then do it.  Context: note on <in-progress-id>.
+New session, next: <next-id> "<title>" — if codebase-memory-mcp is available refresh the index first (detect_changes, re-index if stale), bd update <next-id> --claim, then do it.  Context: note on <in-progress-id>.
 ```
 
 ### 4. Relay the result

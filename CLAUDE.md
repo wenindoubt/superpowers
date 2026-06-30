@@ -166,9 +166,9 @@ bd close <id>         # Complete work
 
 End EVERY response that completes a unit of work with a single final status line, per the `quick-recap` skill:
 
-- `🟢 <status>` — finished. Emit ONLY when `superpowers:verification-before-completion` is satisfied (fresh evidence).
-- `🟡 <status>` — a specific non-routine follow-up remains (name it).
-- `🔴 <status>` — blocked on user input.
+- `🟢 <status>` — this unit verified-done (`superpowers:verification-before-completion` satisfied, fresh evidence). Use 🟢 ALSO for a **soft stall**: a non-blocking question / unsure-what's-next while `bd ready` has obvious work and the question changes neither which task is next nor how to do it — note it on the bead and let the loop advance to `bd ready[0]`.
+- `🟡 <status>` — a specific non-routine follow-up remains that THIS session should finish (name it).
+- `🔴 <status>` — **hard blocker only**: a decision only the human can make, where guessing risks slop. `bd human`-flag it, then stop. Not for ordinary questions (see soft stall).
 
-Under 100 chars, the very last line, nothing after it. The Stop hook reads this line to drive a hands-free per-bead loop: 🟡/🔴 keep the session working; 🟢 + ready beads (no ctx gate by default) -> a fresh cmux session is spawned on the next `bd ready` bead and this session runs `/exit`. Brakes: empty `bd ready`, 🟡/🔴, in-progress bead, `HANDOFF_DISABLE=1`.
+Under 100 chars, the very last line, nothing after it. The Stop hook reads this line to drive a hands-free loop: 🔴 stop (human decision), 🟡 keep this session working; 🟢 + ready beads + context ≥ `HANDOFF_CTX_PCT` (default 0.30 in `hooks/stop`) -> a fresh cmux session is spawned on the next `bd ready` bead (refreshing the codebase index first) and this session runs `/exit`. Soft-stall-as-🟢 means a non-blocking "what next?" advances the loop rather than waiting. Brakes: empty `bd ready`, 🟡/🔴, in-progress bead, `HANDOFF_DISABLE=1`.
 <!-- /quick-recap: fork-local -->
