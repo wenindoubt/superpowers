@@ -48,6 +48,21 @@ claude plugin marketplace update superpowers-dev
 
 (`superpowers-dev` is the marketplace name bundled in `.claude-plugin/marketplace.json`; the live plugin is `superpowers@superpowers-dev`.)
 
+## Shipping a fork-local change (no upstream rebase)
+
+When you edit fork content *without* rebasing onto a new upstream tag, the version in `.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json` stays the same — and Claude Code caches the plugin **by version** under `~/.claude/plugins/cache/superpowers-dev/superpowers/<version>/`. `marketplace update` pulls the new source into the marketplace clone but does **not** rebuild a same-version cache, so the live plugin keeps running the old code.
+
+So: **bump the patch version in BOTH manifests** before refreshing, then:
+
+```bash
+# bump 6.0.x -> 6.0.(x+1) in .claude-plugin/plugin.json AND .claude-plugin/marketplace.json
+git commit -am "chore: bump version for <change>" && git push origin main
+claude plugin marketplace update superpowers-dev
+/reload-plugins   # CC now builds a fresh cache dir for the new version
+```
+
+Keep the bump as a patch (`6.0.3 -> 6.0.4`) to stay close to upstream — the next upstream rebase resolves the version line trivially (take upstream's).
+
 ## Verifying the research pass survived
 
 ```bash
