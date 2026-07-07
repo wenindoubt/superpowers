@@ -1,5 +1,17 @@
 # Superpowers Release Notes
 
+## v6.1.4 (2026-07-07) — fork-local
+
+### cmux-handoff: fold durable learnings into the conventions doc
+
+New **step 1b** in `cmux-handoff`: before handing off, fold the session's durable,
+non-obvious learnings into the project's checked-in conventions doc (`CLAUDE.md` /
+`AGENTS.md`) so the next session doesn't re-discover them. Project-agnostic and
+gated ("skip if the project keeps no such doc") — the *trigger* is global while the
+*content/target* stays per-project. Guards: update-don't-duplicate, only
+non-obvious facts (ephemeral → `bd note`), never edit inside a generated/managed
+block, commit with the session's work so the step-4 push carries it.
+
 ## v6.1.3 (2026-07-07) — fork-local
 
 ### Autonomous loop mode (continue + hand off until fully blocked)

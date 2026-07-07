@@ -55,6 +55,15 @@ bd list --parent <epic> --status closed --json    # already done
 
 If you're unsure whether something works, say so on the bead rather than asserting it's done.
 
+### 1b. Fold durable learnings into the project's conventions doc
+
+If the project keeps a durable, checked-in conventions doc (`CLAUDE.md`, `AGENTS.md`, or similar), fold this session's **durable, non-obvious** learnings into it before handing off — recurring gotchas, patterns, decisions, build/release facts the next session would otherwise re-discover. Skip if the project keeps no such doc.
+
+- **Update** an existing entry rather than duplicating; match the doc's own style/section.
+- Capture only what is NOT already obvious from the code, git history, or an existing entry. One-off/ephemeral context is a `bd note` on the bead, not a durable convention.
+- **Never edit inside a generated/managed block** (e.g. `<!-- BEGIN … -->` fences) — it gets overwritten on regen.
+- Commit it with the session's work so the step-4 push carries it.
+
 ### 2. Pick the next work + compose the seed prompt
 
 - If the user passed a prompt to `/cmux-handoff` → use it **verbatim** (skip to step 3). Don't paraphrase — the point of a handoff is the new session receives exactly what was intended.
