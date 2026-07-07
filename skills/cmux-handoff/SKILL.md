@@ -67,14 +67,19 @@ If you're unsure whether something works, say so on the bead rather than asserti
   - **A bead is ready** → name *that concrete bead* in a one-line seed prompt (it's self-contained: steps + acceptance live in its body):
 
     ```
-    Continue epic <epic-id>. If codebase-memory-mcp is available, first refresh the index (`detect_changes`; re-run `index_repository` if stale), then use it to explore. Next ready task: <next-id> "<title>" — claim it (`bd update <next-id> --claim`), then do it per its bead body. <If a note was pinned: stop-context is in the note on <in-progress-id>.>
+    AUTONOMOUS-LOOP (continue until fully blocked; see skills/_shared/autonomous-loop.md). Continue epic <epic-id>. If codebase-memory-mcp is available, first refresh the index (`detect_changes`; re-run `index_repository` if stale), then use it to explore. Next ready task: <next-id> "<title>" — claim it (`bd update <next-id> --claim`), then do it per its bead body. When done (committed + pushed + bead closed), invoke cmux-handoff for the next ready bead to keep the loop going. <If a note was pinned: stop-context is in the note on <in-progress-id>.>
     ```
+
+    <!-- autonomous-loop: fork-local -->
+    **The `AUTONOMOUS-LOOP` marker is what perpetuates the loop.** It puts the new session in autonomous loop mode (`skills/_shared/autonomous-loop.md`): pre-specced beads skip the brainstorming approval gate, it decides-not-asks (research-first before any block), and — crucially — its closing clause tells it to invoke cmux-handoff again when its task is done. So each hop re-arms the next until a stop condition fires (below). Include the marker + closing clause for epic/queue grinding (the default). OMIT both for a genuine one-off handoff the user asked for as a single hop, and NEVER inject them into a **verbatim** user prompt.
 
     <!-- codebase-memory-mcp: fork-local -->
     **Refresh-then-traverse.** A handoff means code changed, so the new session's index is stale — the SessionStart "Code Discovery Protocol" hook only indexes when a repo is *unindexed*, never refreshes a stale one. So the seed prompt above tells the fresh session to `detect_changes` and re-`index_repository` (only if stale) before traversing via `search_graph`/`trace_path`/`get_code_snippet`. Gate on availability — drop the clause if codebase-memory-mcp isn't in play. **Verbatim user prompts (above) stay verbatim — don't inject the refresh; the new session's normal indexing covers it.**
 
   - **Nothing ready but open beads remain** → they're blocked. Seed `unblock <id>: <blocker>`, not new feature work.
   - **Nothing ready, no open beads** → the epic is **done**. Don't spawn a session for nothing — tell the human the epic is complete and **stop here**.
+  <!-- autonomous-loop: fork-local -->
+  - **A ready task needs a user-only decision** (research already exhausted per `skills/_shared/autonomous-loop.md` — a secret, spend, destructive/outward-facing action, or a real product call with no default) → do NOT guess and do NOT auto-spawn. Hand off **idle** (step 3, no prompt) with the specific question stated for the human, or surface it and stop. This is the third genuine stop condition; anything a codebase or web search could answer is NOT one — research first.
 
   Keep the prompt to **one line**. No newlines (cmux may submit early). No leading `/` (it opens Claude's slash-command menu instead of sending text). Drop the stop-context clause if no note was pinned.
 

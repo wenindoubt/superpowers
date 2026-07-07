@@ -1,5 +1,35 @@
 # Superpowers Release Notes
 
+## v6.1.3 (2026-07-07) — fork-local
+
+### Autonomous loop mode (continue + hand off until fully blocked)
+
+Fixes the failure where the fork's continue/handoff loop stopped after a single
+hop and re-prompted the human on every task. Three structural stops removed —
+each gated on an explicit mode so normal interactive sessions are unchanged.
+
+- **New `skills/_shared/autonomous-loop.md`** — defines the mode (entered by the
+  `AUTONOMOUS-LOOP` seed marker, or the user saying "keep going until blocked" /
+  `/loop` over a queue), its carve-outs, and a **research-first-before-blocked**
+  rule: exhaust codebase + web research (web search REQUIRED for architectural /
+  best-practice questions; `/deep-research` for high-stakes) before ever treating
+  work as blocked or opening an `AskUserQuestion`. Only three genuine stop
+  conditions: dependency-blocked, queue-empty, or a user-only decision research
+  can't answer.
+- **`cmux-handoff`** now injects the `AUTONOMOUS-LOOP` marker + a self-perpetuation
+  clause into the ready-bead seed prompt, so each hop re-arms the next until a stop
+  condition fires. Adds the third stop condition (user-only decision → hand off
+  idle with the question). Verbatim user prompts and genuine one-off handoffs opt
+  out.
+- **`brainstorming`** HARD-GATE gains a mode-scoped exception: an already-specced
+  task (decision bead + scoped task bead) has its design pre-approved — skip the
+  approval gate and implement. Normal sessions still obey the gate with no
+  exceptions.
+- **`using-superpowers`** adds an autonomous-mode section: decide-don't-ask, after
+  research-first.
+
+Version synced 6.1.1/6.1.2 drift → 6.1.3 across all manifests.
+
 ## v6.1.1 (2026-07-02)
 
 ### Codex

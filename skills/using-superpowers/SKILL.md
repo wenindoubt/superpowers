@@ -49,6 +49,23 @@ These thoughts mean STOP—you're rationalizing:
 | "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
 | "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
 
+<!-- autonomous-loop: fork-local -->
+## Autonomous loop mode
+
+When the session is running an already-planned work queue autonomously — the seed
+prompt carries the `AUTONOMOUS-LOOP` marker, or the user said to keep going until
+blocked / ran `/loop` over a queue — the "ask clarifying questions" and
+"one question at a time" defaults invert: **decide, don't ask.** Make the
+defensible default call, state it, `bd note` it on the task bead, and continue.
+
+Before you may treat anything as blocking (and definitely before an
+`AskUserQuestion`), you MUST research first: read the surrounding code, and for any
+architectural / best-practice question **search the web** for the current
+standardized approach (`kiln-web-search-researcher` / `WebSearch`; `/deep-research`
+for high-stakes). Ask the user ONLY for a genuine user-only decision that research
+cannot answer. Full rules + the three real stop conditions:
+`skills/_shared/autonomous-loop.md`.
+
 ## Platform Adaptation
 
 If your harness appears here, read its reference file for special instructions:
