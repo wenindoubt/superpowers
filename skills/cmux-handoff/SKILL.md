@@ -86,7 +86,11 @@ If the project keeps a durable, checked-in conventions doc (`CLAUDE.md`, `AGENTS
     **Refresh-then-traverse.** A handoff means code changed, so the new session's index is stale — the SessionStart "Code Discovery Protocol" hook only indexes when a repo is *unindexed*, never refreshes a stale one. So the seed prompt above tells the fresh session to `detect_changes` and re-`index_repository` (only if stale) before traversing via `search_graph`/`trace_path`/`get_code_snippet`. Gate on availability — drop the clause if codebase-memory-mcp isn't in play. **Verbatim user prompts (above) stay verbatim — don't inject the refresh; the new session's normal indexing covers it.**
 
   - **Nothing ready but open beads remain** → they're blocked. Seed `unblock <id>: <blocker>`, not new feature work.
-  - **Nothing ready, no open beads** → the epic is **done**. Don't spawn a session for nothing — tell the human the epic is complete and **stop here**.
+  - **Nothing ready, no open beads** → the epic is **done**. Don't spawn a session for nothing — **notify the human** and **stop here** (no reaping — the loop ends, remaining tabs stay for review):
+
+    ```bash
+    cmux notify --title "epic <epic-id> complete" --body "no ready beads left — loop finished" --surface "$CMUX_SURFACE_ID"
+    ```
   <!-- autonomous-loop: fork-local -->
   - **A ready task needs a user-only decision** (research already exhausted per `skills/_shared/autonomous-loop.md` — a secret, spend, destructive/outward-facing action, or a real product call with no default) → do NOT guess and do NOT auto-spawn. Hand off **idle** (step 3, no prompt) with the specific question stated for the human, or surface it and stop. This is the third genuine stop condition; anything a codebase or web search could answer is NOT one — research first.
 
@@ -112,9 +116,21 @@ New session, next: <next-id> "<title>" — if codebase-memory-mcp is available r
 
 The script prints a one-line summary and uses exit codes:
 
-- **0** — success: `prompt submitted` (handed off) or `left idle` (no prompt). Tell the user the new tab's name; the view auto-switched to it. The handoff session takes over.
+- **0** — success: `prompt submitted` (handed off) or `left idle` (no prompt). Tell the user the new tab's name (the next bead id); the view auto-switched to it. The handoff session takes over. On a prompted handoff the pool was also bounded (see *Bounding the session pool*) — mention it only if a tab was actually reaped or a reap-error notification fired.
 - **1** — setup problem (not in cmux, `cmux` missing, or tab creation failed). Relay what the error said.
 - **2** — the tab + `clxp` launched, but the agent prompt wasn't ready in time, so the prompt was **not** submitted. Tell the user to switch to the named tab and paste the prompt (the script echoed it).
+
+## Bounding the session pool (the reaper)
+
+A long autonomous loop hands off session→session→session; without a bound, cmux tabs pile up (each is a live Claude Code + node process). `handoff.sh` bounds the pool automatically — **no action needed in this skill's workflow**, but know how it behaves:
+
+- On a **successful prompted handoff only**, the calling session retires itself into a FIFO ring (`~/.claude/state/cmux-handoff-ring.tsv`, keyed on stable surface **UUIDs**) and closes the oldest already-retired tabs so only **`CMUX_HANDOFF_KEEP` (default 3)** stay alive: the fresh worker + the `KEEP-1` most-recent finished predecessors.
+- **The safety invariant:** reaching `handoff.sh` *means* this session already committed + pushed + closed its bead (step 1). So "in the ring" ≡ "reap-safe" — nothing unsaved. A session still mid-task, or idled awaiting a human decision (the stop conditions in step 2), **never runs `handoff.sh`, so is never in the ring and never reaped.** The reaper needs no runtime idle-detection; ring membership is the gate.
+- It **never** closes the surface running the script (self), the just-spawned child, or the currently-focused tab (a human may be viewing it). A crashed session that vanished from `cmux tree` is pruned from the ring for free.
+- **Idle handoffs don't reap** (no prompt = a manual "open a fresh session", caller isn't necessarily done). Only the prompted autonomous-loop path bounds the pool.
+- On a reap failure it fires a `cmux notify` ("reap error") and keeps that entry for next time.
+
+Tune with env: `CMUX_HANDOFF_KEEP` (pool size; `<2` is clamped to 2) and `CMUX_HANDOFF_RING` (registry path). The spawned tab is **named after the next bead id** (parsed from the seed prompt's `task: <id>`) so a pool of tabs is scannable at a glance; a random `<adj>-<noun>-NN` handle is the fallback when no bead id is present.
 
 ## Why this works
 
@@ -132,7 +148,8 @@ The script prints a one-line summary and uses exit codes:
 
 - **Single-line prompts** are most reliable. A prompt with newlines may submit early; one starting with `/` opens the slash menu. For those, hand off idle (no prompt) and let the user paste.
 - The readiness check polls for Claude Code's input caret (`❯`), set as `READY_MARKER` at the top of `scripts/handoff.sh` — adjust there if a future Claude Code UI changes the caret.
-- Tab names can repeat across runs (cmux allows duplicates); the 2-digit suffix makes collisions unlikely and harmless.
+- The tab is named after the next bead id when the seed prompt carries one (`task: <id>`); otherwise a random `<adj>-<noun>-NN` handle (cmux allows duplicate names — the 2-digit suffix makes collisions unlikely and harmless).
+- The pool bound (`CMUX_HANDOFF_KEEP`, default 3) is enforced only on prompted handoffs and only over sessions spawned through this script (tracked in the ring). Tabs you opened by hand are never touched.
 
 ## Anti-patterns
 

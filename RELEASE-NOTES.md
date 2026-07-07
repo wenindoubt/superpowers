@@ -1,5 +1,33 @@
 # Superpowers Release Notes
 
+## v6.1.5 (2026-07-07) — fork-local
+
+### cmux-handoff: bound the session pool + desktop notifications
+
+A long autonomous loop hands off session→session→session; unbounded, cmux tabs
+pile up (each a live Claude Code + node process). `handoff.sh` now bounds the pool
+automatically on a **successful prompted handoff**:
+
+- **FIFO ring reaper.** The retiring session appends its own surface **UUID** to a
+  ring (`~/.claude/state/cmux-handoff-ring.tsv`) and closes the oldest already-
+  retired tabs so only `CMUX_HANDOFF_KEEP` (default 3) stay alive — the fresh
+  worker + the `KEEP-1` most-recent finished predecessors.
+- **Safety invariant, not runtime guessing.** Reaching `handoff.sh` means the
+  session already committed + pushed + closed its bead, so "in the ring" ≡
+  "reap-safe". A session still mid-task, or idled awaiting a human decision, never
+  runs `handoff.sh` → never in the ring → never reaped. The reaper never closes
+  self, the just-spawned child, or the focused tab; a crashed/vanished session is
+  pruned from the ring for free. Idle handoffs (no prompt) don't reap.
+- **Notifications.** Reap failures fire a `cmux notify` ("reap error"); the skill
+  now also notifies on **epic-complete** (no ready beads left). "Awaiting a human
+  decision" already rides cmux's built-in "Claude is waiting for your input".
+- **Legible tabs.** The spawned tab is named after the next bead id (parsed from
+  the seed prompt's `task: <id>`), falling back to the random `<adj>-<noun>-NN`
+  handle. Tune via `CMUX_HANDOFF_KEEP` / `CMUX_HANDOFF_RING`.
+
+Only sessions spawned through this script (tracked in the ring) are ever touched;
+hand-opened tabs are never reaped.
+
 ## v6.1.4 (2026-07-07) — fork-local
 
 ### cmux-handoff: fold durable learnings into the conventions doc
