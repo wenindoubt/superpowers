@@ -10,6 +10,7 @@
 PCT="${HANDOFF_CTX_PCT:-0.30}"
 CTX_TOKENS="${HANDOFF_CTX_TOKENS:-130000}"   # absolute-token cap; 0 disables the cap
 STATE_DIR="${HANDOFF_STATE_DIR:-$HOME/.claude/cmux-handoff-state}"
+STATE_TTL_DAYS="${HANDOFF_STATE_TTL_DAYS:-7}"   # prune flags/logs older than this; 0 disables prune
 BD_BIN="${BD_BIN:-bd}"
 JQ_BIN="${JQ_BIN:-jq}"
 HANDOFF_SH="${HANDOFF_SH:-$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)/skills/cmux-handoff/scripts/handoff.sh}"
@@ -45,6 +46,13 @@ main() {
 
   input="$(cat)"; [ -n "$input" ] || exit 0
   [ "$(printf '%s' "$input" | "$JQ_BIN" -r '.stop_hook_active // false' 2>/dev/null)" = "true" ] && exit 0
+
+  # Prune stale dedup flags + .log files: they matter only for a live session's lifetime, so anything
+  # older than the TTL is dead weight. mtime-based so an active (even multi-day) session is untouched.
+  # Fail-open: no dir / find missing -> skip silently.
+  case "$STATE_TTL_DAYS" in ''|*[!0-9]*) STATE_TTL_DAYS=0 ;; esac
+  [ "$STATE_TTL_DAYS" -gt 0 ] && [ -d "$STATE_DIR" ] && \
+    find "$STATE_DIR" -type f -mtime "+$STATE_TTL_DAYS" -delete 2>/dev/null
 
   session="$(printf '%s' "$input" | "$JQ_BIN" -r '.session_id // empty' 2>/dev/null)"
   transcript="$(printf '%s' "$input" | "$JQ_BIN" -r '.transcript_path // empty' 2>/dev/null)"

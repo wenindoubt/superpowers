@@ -130,6 +130,28 @@ if [ "$ccode2" = 0 ] && [ -z "$cout2" ] && ! grep -q "/exit" "$TMP/cmux.log" 2>/
 else
   FAIL=$((FAIL+1)); echo "FAIL - C path failure (code=$ccode2 out=$cout2 flag=$([ -e "$TMP/state/cmuxf" ] && echo LEAKED || echo none) log=$([ -e "$TMP/state/cmuxf.log" ] && echo yes || echo NO) cmux=$(cat "$TMP/cmux.log" 2>/dev/null))"
 fi
+# --- state prune: old flags/logs removed, fresh + active-session flag kept ---
+PD="$TMP/prune"; mkdir -p "$PD"
+: > "$PD/oldflag"; : > "$PD/old.log"; touch -t 202001010000 "$PD/oldflag" "$PD/old.log"  # ~ancient
+: > "$PD/freshflag"  # today -> keep
+mk_transcript "$T" "claude-opus-4-8" 50000   # low occ -> NO fire, but prune runs before the gates
+printf '%s' "{\"session_id\":\"prune1\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}" \
+  | env HANDOFF_STATE_DIR="$PD" HANDOFF_STATE_TTL_DAYS=7 BD_BIN=bd bash "$HOOK" >/dev/null 2>&1
+if [ ! -e "$PD/oldflag" ] && [ ! -e "$PD/old.log" ] && [ -e "$PD/freshflag" ]; then
+  PASS=$((PASS+1)); echo "ok   - state prune: old flags/logs removed, fresh kept"
+else
+  FAIL=$((FAIL+1)); echo "FAIL - state prune (oldflag=$([ -e "$PD/oldflag" ] && echo LEFT || echo gone) old.log=$([ -e "$PD/old.log" ] && echo LEFT || echo gone) fresh=$([ -e "$PD/freshflag" ] && echo yes || echo GONE))"
+fi
+# --- prune disabled (TTL=0) leaves everything ---
+PD2="$TMP/prune2"; mkdir -p "$PD2"; : > "$PD2/oldflag"; touch -t 202001010000 "$PD2/oldflag"
+printf '%s' "{\"session_id\":\"prune2\",\"transcript_path\":\"$T\",\"stop_hook_active\":false}" \
+  | env HANDOFF_STATE_DIR="$PD2" HANDOFF_STATE_TTL_DAYS=0 BD_BIN=bd bash "$HOOK" >/dev/null 2>&1
+if [ -e "$PD2/oldflag" ]; then
+  PASS=$((PASS+1)); echo "ok   - prune disabled (TTL=0) keeps old files"
+else
+  FAIL=$((FAIL+1)); echo "FAIL - prune ran despite TTL=0"
+fi
+
 # --- wiring: hooks.json registers a Stop hook pointing at run-hook.cmd stop ---
 HJ="$(cd "$(dirname "$0")" && pwd)/hooks.json"
 if jq -e '.hooks.Stop[0].hooks[0].command | test("run-hook.cmd. stop")' "$HJ" >/dev/null 2>&1; then
