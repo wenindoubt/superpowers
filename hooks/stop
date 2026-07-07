@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # Stop hook — auto-trigger cmux-handoff when ready beads work remains (per-bead loop).
 # Spec: bd sp-dbk + sp-4y7. FAIL-OPEN: any missing dep / parse error exits 0 (never traps a session).
-# Ctx-gated default: HANDOFF_CTX_PCT=0.30 -> a session packs ready beads until context >=30%, then
-# hands off at the next 🟢 seam, looping through `bd ready` across fresh sessions. Brakes: empty bd
-# ready, footer 🟡/🔴, in_progress!=0, HANDOFF_DISABLE=1. Set HANDOFF_CTX_PCT=0 for per-bead (every
-# seam hands off); HANDOFF_DISABLE=1 to turn the loop off entirely.
+# Ctx-gated default: a session packs ready beads until context is "full enough", then hands off at the
+# next 🟢 seam, looping through `bd ready` across fresh sessions. The threshold is
+# min(HANDOFF_CTX_PCT*window, HANDOFF_CTX_TOKENS) -> whichever comes first. The absolute cap keeps
+# large (1M) windows from parking the trigger at 300k tokens (30% of 1M) where sessions never reach it.
+# Brakes: empty bd ready, footer 🟡/🔴, in_progress!=0, HANDOFF_DISABLE=1. Set HANDOFF_CTX_PCT=0 AND
+# HANDOFF_CTX_TOKENS=0 for per-bead (every seam hands off); HANDOFF_DISABLE=1 to turn the loop off.
 PCT="${HANDOFF_CTX_PCT:-0.30}"
+CTX_TOKENS="${HANDOFF_CTX_TOKENS:-130000}"   # absolute-token cap; 0 disables the cap
 STATE_DIR="${HANDOFF_STATE_DIR:-$HOME/.claude/cmux-handoff-state}"
 BD_BIN="${BD_BIN:-bd}"
 JQ_BIN="${JQ_BIN:-jq}"
@@ -60,7 +63,15 @@ main() {
   model="${mu% *}"; occ="${mu##* }"
   case "$occ" in ''|*[!0-9]*) exit 0 ;; esac
   window="$(infer_window "$model")"
-  awk -v o="$occ" -v w="$window" -v p="$PCT" 'BEGIN{exit !(w>0 && (o/w)>=p)}' || exit 0
+  # Effective threshold = min(pct*window, CTX_TOKENS). CTX_TOKENS=0 disables the abs cap; likewise
+  # if pct*window is 0 the abs cap alone governs. Fire when occupancy reaches the effective threshold.
+  awk -v o="$occ" -v w="$window" -v p="$PCT" -v c="$CTX_TOKENS" 'BEGIN{
+    if (w<=0) exit 1
+    thr=p*w
+    if (c>0 && (thr<=0 || c<thr)) thr=c
+    # thr<=0 only when BOTH pct and cap are disabled -> no ctx gate -> per-bead (always fire).
+    exit !(thr<=0 || o>=thr)
+  }' || exit 0
 
   ready="$("$BD_BIN" ready --json 2>/dev/null | "$JQ_BIN" 'length' 2>/dev/null)"
   case "$ready" in ''|*[!0-9]*) exit 0 ;; esac
@@ -75,23 +86,26 @@ main() {
   tk_disp="$(awk -v o="$occ" 'BEGIN{printf "%d",o/1000}')"
 
   # [C] In cmux with a usable handoff script -> spawn a fresh session directly, no agent round-trip.
-  # Detached subshell: run handoff.sh, and ONLY if it succeeds (prompt submitted -> rc 0) send `/exit`
-  # to THIS surface so the finished session closes cleanly and the view stays on the fresh tab.
-  # Detaching keeps the hook fast (no UI freeze) and lets `/exit` land after Claude is idle; a failed
-  # handoff (rc!=0: setup error / prompt-not-ready) skips `/exit`, leaving this session for recovery.
+  # Detached subshell: run handoff.sh (stdout+stderr -> <session>.log), and ONLY on rc 0 mark this
+  # session handed-off (write $flag) and send `/exit` to THIS surface so the finished session closes
+  # cleanly and the view stays on the fresh tab. A failed handoff (rc!=0: setup error / prompt-not-
+  # ready) writes NO flag -> the next Stop retries, and <session>.log captures why it failed.
+  # Detaching keeps the hook fast (no UI freeze) and lets `/exit` land after Claude is idle.
   if [ -n "${CMUX_SURFACE_ID:-}" ] && command -v cmux >/dev/null 2>&1 && [ -x "$HANDOFF_SH" ]; then
     rj="$("$BD_BIN" ready --json 2>/dev/null)"
     nid="$(printf '%s' "$rj" | "$JQ_BIN" -r '.[0].id // empty' 2>/dev/null)"
     ntitle="$(printf '%s' "$rj" | "$JQ_BIN" -r '.[0].title // empty' 2>/dev/null)"
     seed="Continue work. If codebase-memory-mcp is available, first refresh the index (detect_changes; re-index if stale), then use it to explore. Next ready task: ${nid} \"${ntitle}\" — claim it (bd update ${nid} --claim), then do it per its bead body."
-    [ -n "$session" ] && : > "$flag" 2>/dev/null
+    flagarg=""; [ -n "$session" ] && flagarg="$flag"
+    logf="$STATE_DIR/${session:-unknown}.log"
     nohup sh -c '
-      hs=$1; seed=$2; surf=$3
-      if sh "$hs" "$seed"; then
+      hs=$1; seed=$2; surf=$3; flag=$4; logf=$5
+      if sh "$hs" "$seed" >"$logf" 2>&1; then
+        [ -n "$flag" ] && : > "$flag" 2>/dev/null
         sleep 1
         cmux send --surface "$surf" "/exit" && sleep 1 && cmux send-key --surface "$surf" enter
       fi
-    ' sh "$HANDOFF_SH" "$seed" "$CMUX_SURFACE_ID" >/dev/null 2>&1 &
+    ' sh "$HANDOFF_SH" "$seed" "$CMUX_SURFACE_ID" "$flagarg" "$logf" >/dev/null 2>&1 &
     exit 0
   fi
 
