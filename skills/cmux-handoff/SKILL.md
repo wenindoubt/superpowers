@@ -142,7 +142,7 @@ Tune with env: `CMUX_HANDOFF_KEEP` (pool size; `<2` is clamped to 2) and `CMUX_H
 ## Prerequisites
 
 - Runs from **inside a cmux terminal** running Claude Code (`CMUX_SURFACE_ID` is set automatically there). Unset → the graceful fallback in step 3 applies.
-- The user's interactive shell defines the `clxp` alias (`claude --dangerously-skip-permissions --strict-mcp-config --mcp-config ~/.claude/mcp-personal.json`). The new tab is a real interactive shell, so the alias resolves there.
+- The user's interactive shell defines the `clxp` alias (`claude --dangerously-skip-permissions --strict-mcp-config --mcp-config ~/.claude/mcp-personal.json`). The new tab is a real interactive shell, so the alias resolves there. The handoff launches it as `clxp --chrome` (`LAUNCH_CMD` in `scripts/handoff.sh`) so claude-in-chrome is available in the fresh session.
 
 ## Notes & limits
 

@@ -24,7 +24,7 @@
 set -eu
 
 # --- tunables ---------------------------------------------------------------
-LAUNCH_CMD="clxp"   # interactive command that starts the agent in the new tab
+LAUNCH_CMD="clxp --chrome"   # interactive command that starts the agent in the new tab (--chrome enables claude-in-chrome)
 READY_MARKER="❯"     # Claude Code input caret: signals the TUI is ready for input
 BOOT_FLOOR=2        # seconds to wait before polling (shell -> agent handoff)
 BOOT_TIMEOUT=30     # max seconds to wait for the agent prompt
