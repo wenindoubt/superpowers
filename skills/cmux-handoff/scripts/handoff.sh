@@ -3,7 +3,7 @@
 # cmux pane, launch it via the user's `clxp` alias, and optionally seed it with a
 # handoff prompt. On a successful *prompted* handoff it also bounds the session
 # pool: it retires the calling session into a FIFO ring and closes the oldest
-# already-handed-off tabs so only CMUX_HANDOFF_KEEP stay alive (default 3).
+# already-handed-off tabs so only CMUX_HANDOFF_KEEP stay alive (default 5).
 #
 # POSIX sh. Run from inside a cmux + Claude Code session.
 #
@@ -13,7 +13,7 @@
 #     no prompt      -> the new session is launched and left idle (no reaping)
 #
 # Env tunables:
-#   CMUX_HANDOFF_KEEP   max live handoff sessions to keep (default 3; <2 => 2)
+#   CMUX_HANDOFF_KEEP   max live handoff sessions to keep (default 5; <2 => 2)
 #   CMUX_HANDOFF_RING   ring registry path (default ~/.claude/state/cmux-handoff-ring.tsv)
 #
 # Exit codes:
@@ -28,7 +28,7 @@ LAUNCH_CMD="clxp --chrome"   # interactive command that starts the agent in the 
 READY_MARKER="❯"     # Claude Code input caret: signals the TUI is ready for input
 BOOT_FLOOR=2        # seconds to wait before polling (shell -> agent handoff)
 BOOT_TIMEOUT=30     # max seconds to wait for the agent prompt
-KEEP_ALIVE="${CMUX_HANDOFF_KEEP:-3}"
+KEEP_ALIVE="${CMUX_HANDOFF_KEEP:-5}"
 RING="${CMUX_HANDOFF_RING:-$HOME/.claude/state/cmux-handoff-ring.tsv}"
 
 PROMPT="$*"

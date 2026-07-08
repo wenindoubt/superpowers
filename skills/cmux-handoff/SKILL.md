@@ -124,7 +124,7 @@ The script prints a one-line summary and uses exit codes:
 
 A long autonomous loop hands off session→session→session; without a bound, cmux tabs pile up (each is a live Claude Code + node process). `handoff.sh` bounds the pool automatically — **no action needed in this skill's workflow**, but know how it behaves:
 
-- On a **successful prompted handoff only**, the calling session retires itself into a FIFO ring (`~/.claude/state/cmux-handoff-ring.tsv`, keyed on stable surface **UUIDs**) and closes the oldest already-retired tabs so only **`CMUX_HANDOFF_KEEP` (default 3)** stay alive: the fresh worker + the `KEEP-1` most-recent finished predecessors.
+- On a **successful prompted handoff only**, the calling session retires itself into a FIFO ring (`~/.claude/state/cmux-handoff-ring.tsv`, keyed on stable surface **UUIDs**) and closes the oldest already-retired tabs so only **`CMUX_HANDOFF_KEEP` (default 5)** stay alive: the fresh worker + the `KEEP-1` most-recent finished predecessors.
 - **The safety invariant:** reaching `handoff.sh` *means* this session already committed + pushed + closed its bead (step 1). So "in the ring" ≡ "reap-safe" — nothing unsaved. A session still mid-task, or idled awaiting a human decision (the stop conditions in step 2), **never runs `handoff.sh`, so is never in the ring and never reaped.** The reaper needs no runtime idle-detection; ring membership is the gate.
 - It **never** closes the surface running the script (self), the just-spawned child, or the currently-focused tab (a human may be viewing it). A crashed session that vanished from `cmux tree` is pruned from the ring for free.
 - **Idle handoffs don't reap** (no prompt = a manual "open a fresh session", caller isn't necessarily done). Only the prompted autonomous-loop path bounds the pool.
@@ -149,7 +149,7 @@ Tune with env: `CMUX_HANDOFF_KEEP` (pool size; `<2` is clamped to 2) and `CMUX_H
 - **Single-line prompts** are most reliable. A prompt with newlines may submit early; one starting with `/` opens the slash menu. For those, hand off idle (no prompt) and let the user paste.
 - The readiness check polls for Claude Code's input caret (`❯`), set as `READY_MARKER` at the top of `scripts/handoff.sh` — adjust there if a future Claude Code UI changes the caret.
 - The tab is named after the next bead id when the seed prompt carries one (`task: <id>`); otherwise a random `<adj>-<noun>-NN` handle (cmux allows duplicate names — the 2-digit suffix makes collisions unlikely and harmless).
-- The pool bound (`CMUX_HANDOFF_KEEP`, default 3) is enforced only on prompted handoffs and only over sessions spawned through this script (tracked in the ring). Tabs you opened by hand are never touched.
+- The pool bound (`CMUX_HANDOFF_KEEP`, default 5) is enforced only on prompted handoffs and only over sessions spawned through this script (tracked in the ring). Tabs you opened by hand are never touched.
 
 ## Anti-patterns
 

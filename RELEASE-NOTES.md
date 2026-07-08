@@ -1,5 +1,13 @@
 # Superpowers Release Notes
 
+## v6.1.7 (2026-07-08) — fork-local
+
+### cmux-handoff: default session pool 3 → 5
+
+`CMUX_HANDOFF_KEEP` now defaults to **5** (fresh worker + 4 most-recent finished
+predecessors). Three retained tabs was too shallow to scroll back through a
+handoff chain mid-loop. Override with `CMUX_HANDOFF_KEEP` as before.
+
 ## v6.1.5 (2026-07-07) — fork-local
 
 ### cmux-handoff: bound the session pool + desktop notifications
