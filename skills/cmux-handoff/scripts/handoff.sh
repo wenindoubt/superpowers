@@ -101,19 +101,22 @@ ring_reap() {
   # Keep the newest (KEEP_ALIVE-1) retired alive; the child takes the last slot.
   keep=$((KEEP_ALIVE - 1))
   [ "$keep" -lt 1 ] && keep=1
-  total=0
-  for _u in $alive; do total=$((total + 1)); done
-  reap=$((total - keep))
+  remaining=0
+  for _u in $alive; do remaining=$((remaining + 1)); done
 
+  # Close oldest-first until the surviving retired pool fits `keep`. A SKIPPED entry
+  # (self, focused, or a failed close) stays ALIVE, so it must not consume a reap slot:
+  # counting it as progress leaves the pool a tab over KEEP until some later hop happens
+  # to find it closable. Only a successful close decrements `remaining`. If every entry
+  # is unclosable the loop simply runs out — the next handoff retries.
   reaped=" "
-  i=0
   for u in $alive; do
-    i=$((i + 1))
-    [ "$i" -le "$reap" ] || break
+    [ "$remaining" -gt "$keep" ] || break
     [ "$u" = "$SELF" ] && continue     # never close the surface running this script
     [ "$u" = "$FOCUSED" ] && continue  # a human may be viewing it
     if cmux close-surface --surface "$u" >/dev/null 2>&1; then
       reaped="$reaped$u "
+      remaining=$((remaining - 1))
     else
       hf_notify "reap error" "could not close idle handoff session $u"
     fi
