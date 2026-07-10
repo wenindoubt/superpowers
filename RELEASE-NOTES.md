@@ -1,5 +1,41 @@
 # Superpowers Release Notes
 
+## v6.1.9 (2026-07-10) — fork-local
+
+Four skill sharpenings, each from a concrete miss in a long build-and-ship session.
+(Also resyncs a pre-existing version drift: five manifests were stranded at 6.1.5.)
+
+### cmux-handoff: check the *seeded bead's acceptance* before arming AUTONOMOUS-LOOP
+
+The loop's stop conditions were only consulted at spawn time, never against the task
+being handed off. So a bead whose acceptance is "deploy to production and verify with
+real spend" could be armed for an unattended loop. Step 2 now requires reading the next
+bead's acceptance: if it contains an outward-facing / spend / destructive step, omit the
+marker or pin a stop-point note and say so in the seed.
+
+### cmux-handoff: new anti-pattern — the overstuffed seed that restates the bead
+
+The opposite of a vague seed, equally bad: cramming the bead's facts and traps into the
+prompt forks the truth, and the prompt goes stale the moment the bead is edited. The seed
+is a pointer plus at most the one trap not yet written down; everything else is a `bd note`.
+
+### verification-before-completion: discriminating checks over the whole interval
+
+Added the two ways a check can *run* and still prove nothing — it can't discriminate the
+defect ("if this were subtly wrong, would this check show it?"), or it samples an instant
+when the claim spans an interval. A durational artifact (video, animation, streamed UI,
+long job) must be sampled *after each state transition*, not only at t=0. From shipping a
+video whose spotlight ring circled the wrong element for 15s while every start-of-beat
+screenshot looked fine.
+
+### systematic-debugging: measure before you hypothesize; the moving-target bug class
+
+If a direct observation costs less than the loop needed to test a guess, observe first —
+guessing is only cheaper when observing is expensive. Plus a bug class to recognize on
+sight: never sample a value while something else is mutating it (`getBoundingClientRect`
+mid-transition, `offsetWidth` under `transition: all`, `boundingBox` on a just-rerendered
+node). From four re-record cycles of CSS guessing that one in-page measurement ended.
+
 ## v6.1.7 (2026-07-08) — fork-local
 
 ### cmux-handoff: default session pool 3 → 5

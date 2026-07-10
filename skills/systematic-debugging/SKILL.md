@@ -147,6 +147,10 @@ You MUST complete each phase before proceeding to the next.
 
 ### Phase 3: Hypothesis and Testing
 
+**Measure before you hypothesize.** If a direct observation of the real system costs less than the loop you're about to run to *test a guess* — a shell probe, a one-off script, an in-page `evaluate`, printing the actual value — take the measurement first. Guessing is only cheaper when observing is expensive; when a 10-second probe can read the true value and the test-a-hypothesis cycle costs minutes (a rebuild, a re-record, a deploy, real API spend), inference is the false economy. The tell you're in this trap: you've formed two or more hypotheses about the *same* value without ever having looked at it. Stop and look. (A half-pixel layout bug survived four full re-record cycles of CSS guessing; one in-page measurement of the element found it — the gutter was `332.5px` and `offsetWidth` rounds up to `333` — in ten seconds.)
+
+**One bug class to recognize on sight: never sample a value while something else is mutating it.** `getBoundingClientRect()` read during a CSS transition returns where the element is animating *from*, not where it lands; `offsetWidth` under `transition: all` is stale for the same reason; `boundingBox()` on a DOM node a framework just re-rendered can be `null`; a size read mid-reflow, a file read mid-write, a counter read mid-update — all the same shape. If your measurement disagrees with your eyes, suspect that you measured a moving target. Read it when it's settled, or read a property that isn't animating.
+
 **Scientific method:**
 
 1. **Form Single Hypothesis**

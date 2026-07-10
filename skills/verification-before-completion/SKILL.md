@@ -48,6 +48,18 @@ Skip any step = lying, not verifying
 | Regression test works | Red-green cycle verified | Test passes once |
 | Agent completed | VCS diff shows changes | Agent reports "success" |
 | Requirements met | Line-by-line checklist | Tests passing |
+| Video / animation / streaming UI correct | Watched the WHOLE interval, and the frame AFTER each state change | A snapshot at t=0, or "the run passed" |
+| Rendered artifact shows what's claimed | Looked at the thing a viewer sees, against the claim | The generator exited 0 |
+
+## Verify what's claimed, over the whole interval it's claimed for
+
+Two ways a verification can be *run* and still prove nothing:
+
+**1. The check can't discriminate.** Before trusting a check, ask: **"if this were subtly wrong, would this check show it?"** A green test suite proves the code ran; it does not prove the output *means* what you're claiming. "The take passed" and "16 screenshots looked fine" are real evidence — for *"it ran"* and *"these 16 instants were ok"* — but neither can see a defect that lives in between. If your claim is about the artifact a human experiences (a video, a chart, a page, a document), your check has to look at *that*, against the words of the claim — not at the exit code of the thing that produced it.
+
+**2. The check samples an instant, but the claim spans an interval.** A screenshot is a sample at one `t`. A durational artifact (video, animation, streamed answer, long-running job, any UI that transitions) can be correct at `t=0` and wrong at `t=8s` — precisely because something *changed*: a node unmounted, an element finished animating, a bubble got replaced, a row detached and the overlay pinned to it stayed put. **Sample after every state transition, and specifically after the action you just took has taken effect** — not only when it starts. If you clicked something that removes its own target, capture *after* the removal, not just before.
+
+The tell: you verified **that it ran** and **that it looked right where you happened to look**, when the claim was **that it shows the right thing throughout**. That gap is where the wrong-thing-on-screen ships.
 
 ## Red Flags - STOP
 
