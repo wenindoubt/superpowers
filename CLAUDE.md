@@ -113,3 +113,22 @@ Before proposing changes to skill design, workflow philosophy, or architecture, 
 - One problem per PR
 - Test on at least one harness and report results in the environment table
 - Describe the problem you solved, not just what you changed
+
+## Session Completion
+
+When ending a work session, complete all applicable steps below. Work is not complete until the changes are pushed successfully.
+
+1. **File issues for remaining work** — create issues for anything that needs follow-up
+2. **Run quality gates** — run applicable tests, linters, and builds
+3. **Update issue status** — close finished work and update in-progress items
+4. **Push to the remote**:
+   ```bash
+   git pull --rebase
+   git push
+   git status  # must show "up to date with origin"
+   ```
+5. **Clean up** — clear temporary state and prune obsolete remote branches
+6. **Verify** — confirm all intended changes are committed and pushed
+7. **Hand off** — provide context for the next session when work remains
+
+Never stop with completed work stranded locally. If the push fails, resolve the failure and retry.
