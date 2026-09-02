@@ -1,23 +1,16 @@
 # Superpowers Release Notes
 
+## v6.1.10 (2026-09-02) — fork-local
+
+### Issue-tracker decoupling
+
+- Restored specs and implementation plans as checked-in Markdown artifacts.
+- Removed tracker-specific hooks, workflow skills, task bridges, tests, and contributor instructions.
+- Kept task execution and handoff workflows independent of any external issue tracker.
+
 ## v6.1.9 (2026-07-10) — fork-local
 
-Four skill sharpenings, each from a concrete miss in a long build-and-ship session.
-(Also resyncs a pre-existing version drift: five manifests were stranded at 6.1.5.)
-
-### cmux-handoff: check the *seeded bead's acceptance* before arming AUTONOMOUS-LOOP
-
-The loop's stop conditions were only consulted at spawn time, never against the task
-being handed off. So a bead whose acceptance is "deploy to production and verify with
-real spend" could be armed for an unattended loop. Step 2 now requires reading the next
-bead's acceptance: if it contains an outward-facing / spend / destructive step, omit the
-marker or pin a stop-point note and say so in the seed.
-
-### cmux-handoff: new anti-pattern — the overstuffed seed that restates the bead
-
-The opposite of a vague seed, equally bad: cramming the bead's facts and traps into the
-prompt forks the truth, and the prompt goes stale the moment the bead is edited. The seed
-is a pointer plus at most the one trap not yet written down; everything else is a `bd note`.
+Two skill sharpenings, each from a concrete miss in a long build-and-ship session.
 
 ### verification-before-completion: discriminating checks over the whole interval
 
@@ -35,84 +28,6 @@ guessing is only cheaper when observing is expensive. Plus a bug class to recogn
 sight: never sample a value while something else is mutating it (`getBoundingClientRect`
 mid-transition, `offsetWidth` under `transition: all`, `boundingBox` on a just-rerendered
 node). From four re-record cycles of CSS guessing that one in-page measurement ended.
-
-## v6.1.7 (2026-07-08) — fork-local
-
-### cmux-handoff: default session pool 3 → 5
-
-`CMUX_HANDOFF_KEEP` now defaults to **5** (fresh worker + 4 most-recent finished
-predecessors). Three retained tabs was too shallow to scroll back through a
-handoff chain mid-loop. Override with `CMUX_HANDOFF_KEEP` as before.
-
-## v6.1.5 (2026-07-07) — fork-local
-
-### cmux-handoff: bound the session pool + desktop notifications
-
-A long autonomous loop hands off session→session→session; unbounded, cmux tabs
-pile up (each a live Claude Code + node process). `handoff.sh` now bounds the pool
-automatically on a **successful prompted handoff**:
-
-- **FIFO ring reaper.** The retiring session appends its own surface **UUID** to a
-  ring (`~/.claude/state/cmux-handoff-ring.tsv`) and closes the oldest already-
-  retired tabs so only `CMUX_HANDOFF_KEEP` (default 3) stay alive — the fresh
-  worker + the `KEEP-1` most-recent finished predecessors.
-- **Safety invariant, not runtime guessing.** Reaching `handoff.sh` means the
-  session already committed + pushed + closed its bead, so "in the ring" ≡
-  "reap-safe". A session still mid-task, or idled awaiting a human decision, never
-  runs `handoff.sh` → never in the ring → never reaped. The reaper never closes
-  self, the just-spawned child, or the focused tab; a crashed/vanished session is
-  pruned from the ring for free. Idle handoffs (no prompt) don't reap.
-- **Notifications.** Reap failures fire a `cmux notify` ("reap error"); the skill
-  now also notifies on **epic-complete** (no ready beads left). "Awaiting a human
-  decision" already rides cmux's built-in "Claude is waiting for your input".
-- **Legible tabs.** The spawned tab is named after the next bead id (parsed from
-  the seed prompt's `task: <id>`), falling back to the random `<adj>-<noun>-NN`
-  handle. Tune via `CMUX_HANDOFF_KEEP` / `CMUX_HANDOFF_RING`.
-
-Only sessions spawned through this script (tracked in the ring) are ever touched;
-hand-opened tabs are never reaped.
-
-## v6.1.4 (2026-07-07) — fork-local
-
-### cmux-handoff: fold durable learnings into the conventions doc
-
-New **step 1b** in `cmux-handoff`: before handing off, fold the session's durable,
-non-obvious learnings into the project's checked-in conventions doc (`CLAUDE.md` /
-`AGENTS.md`) so the next session doesn't re-discover them. Project-agnostic and
-gated ("skip if the project keeps no such doc") — the *trigger* is global while the
-*content/target* stays per-project. Guards: update-don't-duplicate, only
-non-obvious facts (ephemeral → `bd note`), never edit inside a generated/managed
-block, commit with the session's work so the step-4 push carries it.
-
-## v6.1.3 (2026-07-07) — fork-local
-
-### Autonomous loop mode (continue + hand off until fully blocked)
-
-Fixes the failure where the fork's continue/handoff loop stopped after a single
-hop and re-prompted the human on every task. Three structural stops removed —
-each gated on an explicit mode so normal interactive sessions are unchanged.
-
-- **New `skills/_shared/autonomous-loop.md`** — defines the mode (entered by the
-  `AUTONOMOUS-LOOP` seed marker, or the user saying "keep going until blocked" /
-  `/loop` over a queue), its carve-outs, and a **research-first-before-blocked**
-  rule: exhaust codebase + web research (web search REQUIRED for architectural /
-  best-practice questions; `/deep-research` for high-stakes) before ever treating
-  work as blocked or opening an `AskUserQuestion`. Only three genuine stop
-  conditions: dependency-blocked, queue-empty, or a user-only decision research
-  can't answer.
-- **`cmux-handoff`** now injects the `AUTONOMOUS-LOOP` marker + a self-perpetuation
-  clause into the ready-bead seed prompt, so each hop re-arms the next until a stop
-  condition fires. Adds the third stop condition (user-only decision → hand off
-  idle with the question). Verbatim user prompts and genuine one-off handoffs opt
-  out.
-- **`brainstorming`** HARD-GATE gains a mode-scoped exception: an already-specced
-  task (decision bead + scoped task bead) has its design pre-approved — skip the
-  approval gate and implement. Normal sessions still obey the gate with no
-  exceptions.
-- **`using-superpowers`** adds an autonomous-mode section: decide-don't-ask, after
-  research-first.
-
-Version synced 6.1.1/6.1.2 drift → 6.1.3 across all manifests.
 
 ## v6.1.1 (2026-07-02)
 

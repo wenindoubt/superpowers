@@ -5,16 +5,6 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 # Writing Plans
 
-## First action: beads check (scripted, not judgment)
-
-Before anything else, run this — do NOT decide by feel:
-
-```bash
-command -v bd >/dev/null 2>&1 && echo "BEADS PRESENT: plans are beads, not markdown" || echo "no beads: markdown fallback"
-```
-
-If `bd` is present, the plan is an **epic bead + task beads** (run the ask-first preflight in `skills/_shared/beads-workflow.md`), NOT a `docs/superpowers/plans/*.md` file. The `beads-preflight` PreToolUse hook blocks the first attempt to Write a superpowers plan markdown while `bd` is available — that block is the reminder to create the beads first. Only fall back to markdown if the human declined beads.
-
 ## Overview
 
 Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
@@ -25,18 +15,8 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated worktree, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
 
-<!-- beads-native: fork-local -->
-**Save plans as beads** (run the ask-first preflight in `skills/_shared/beads-workflow.md` first):
-
-    EPIC=$(bd create --type epic --title "<feature>" --silent -d - <<'GOAL'
-    Goal: <one sentence>
-    Architecture: <2-3 sentences>
-    Tech Stack: <key tech>
-    GOAL
-    )
-    bd update "$EPIC" --spec-id "$DECISION"   # decision bead ID from brainstorming, if present
-
-If the human declined beads, fall back to `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md` (user preferences for plan location override this default).
+**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
+- (User preferences for plan location override this default)
 
 ## Scope Check
 
@@ -100,30 +80,6 @@ include this section.]
 ```
 
 ## Task Structure
-
-<!-- beads-native: fork-local -->
-**Each task = one `task` bead** (not a markdown section). The 5 TDD steps + code blocks go in the bead BODY as a checklist — never as separate beads.
-
-    T=$(bd create --type task --parent "$EPIC" --title "<task name>" \
-      --acceptance "tests pass + committed" --silent --description=- <<'BODY'
-    ### Files
-    - Create: <path>   - Modify: <path:lines>   - Test: <path>
-
-    - [ ] Step 1: Write the failing test
-    <test code>
-    - [ ] Step 2: Run it, verify it fails — `<cmd>` → FAIL
-    - [ ] Step 3: Minimal implementation
-    <impl code>
-    - [ ] Step 4: Run it, verify it passes — `<cmd>` → PASS
-    - [ ] Step 5: Commit (include "(bd-<this-id>)" in the message)
-    BODY
-    )
-
-Wire ordering with dependencies (a task that must follow another):
-
-    bd dep add "$T_later" "$T_earlier" --type blocks
-
-The markdown structure below now describes the **bead body** content (Files + bite-sized steps):
 
 ````markdown
 ### Task N: [Component Name]
@@ -223,9 +179,20 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Execution Handoff
 
-After saving the plan, default to Subagent-Driven execution. Do not ask which approach — proceed directly.
+After saving the plan, offer execution choice:
 
-**"Plan complete: epic `$EPIC` with N task beads. Executing Subagent-Driven: fresh subagent per ready task, review between tasks."** <!-- beads-native: fork-local -->
+**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
 
+**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
+
+**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
+
+**Which approach?"**
+
+**If Subagent-Driven chosen:**
 - **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
 - Fresh subagent per task + two-stage review
+
+**If Inline Execution chosen:**
+- **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
+- Batch execution with checkpoints for review

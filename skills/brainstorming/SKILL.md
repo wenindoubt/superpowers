@@ -5,16 +5,6 @@ description: "You MUST use this before any creative work - creating features, bu
 
 # Brainstorming Ideas Into Designs
 
-## First action: beads check (scripted, not judgment)
-
-Before anything else, run this — do NOT decide by feel:
-
-```bash
-command -v bd >/dev/null 2>&1 && echo "BEADS PRESENT: the spec is a decision bead, not markdown" || echo "no beads: markdown fallback"
-```
-
-If `bd` is present, the design/spec is a **decision bead** (run the ask-first preflight in `skills/_shared/beads-workflow.md`), NOT a `docs/superpowers/specs/*.md` file. The `beads-preflight` PreToolUse hook blocks the first attempt to Write a superpowers spec markdown while `bd` is available — that block is the reminder to create the bead first. Only fall back to markdown if the human declined beads.
-
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 
 Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
@@ -22,9 +12,6 @@ Start by understanding the current project context, then ask questions one at a 
 <HARD-GATE>
 Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
 </HARD-GATE>
-
-<!-- autonomous-loop: fork-local -->
-**Autonomous-loop exception.** In autonomous loop mode (`skills/_shared/autonomous-loop.md`) a task that is ALREADY specced — an existing `decision` bead (the design) plus a scoped task bead — has its design pre-approved; skip this gate and implement per the task body. This exception applies ONLY in that mode; a normal session obeys the gate above with no exceptions. Either way, "research-first before blocked" (that file) still holds: exhaust codebase + web research before any stop-and-ask.
 
 ## Anti-Pattern: "This Is Too Simple To Need A Design"
 
@@ -40,9 +27,10 @@ You MUST create a task for each of these items and complete them in order:
 4. **Mandatory web-research pass** — dispatch kiln-web-search-researcher on external unknowns before proposing approaches (see Mandatory Web-Research Pass below)
 5. **Propose 2-3 approaches** — with trade-offs and your recommendation
 6. **Present design** — in sections scaled to their complexity, get user approval after each section
-7. **Write the design** — as a `decision` bead (beads-native; markdown fallback if beads declined). See "After the Design". <!-- beads-native: fork-local -->
+7. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
 8. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+9. **User reviews written spec** — ask user to review the spec file before proceeding
+10. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
 ## Process Flow
 
@@ -56,6 +44,7 @@ digraph brainstorming {
     "User approves design?" [shape=diamond];
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
+    "User reviews spec?" [shape=diamond];
     "Invoke writing-plans skill" [shape=doublecircle];
 
     "Explore project context" -> "Ask clarifying questions";
@@ -66,7 +55,9 @@ digraph brainstorming {
     "User approves design?" -> "Present design sections" [label="no, revise"];
     "User approves design?" -> "Write design doc" [label="yes"];
     "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "Invoke writing-plans skill";
+    "Spec self-review\n(fix inline)" -> "User reviews spec?";
+    "User reviews spec?" -> "Write design doc" [label="changes requested"];
+    "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
 }
 ```
 
@@ -121,20 +112,10 @@ If `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is set, run the approach-exploration s
 
 **Documentation:**
 
-<!-- beads-native: fork-local -->
-- **Run the ask-first preflight** in `skills/_shared/beads-workflow.md`. If the human declines beads, fall back to writing `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` (user preferences for spec location override this default), use elements-of-style:writing-clearly-and-concisely if available, commit it, and skip the rest of this block.
-- Otherwise write the validated design as a **decision bead** (do NOT write a spec markdown file):
-
-      DECISION=$(bd create --type decision --title "<topic>" \
-        --description=- \
-        --design "<chosen approach + key tradeoffs>" --silent <<'SPEC'
-      <the full spec body: goal, architecture, components, data flow, error handling, testing>
-      SPEC
-      )
-      bd note "$DECISION" "Research Findings: <findings + source URLs + retrieval date>"
-
-- Record the decision bead ID — writing-plans needs it for `--spec-id`.
-- The decision bead lives in the local Dolt DB — do **not** `git add .beads/` or `issues.jsonl` (Dolt-native, gitignored). Publish it with `bd dolt push` (→ `refs/dolt/data`); see `skills/_shared/beads-workflow.md` → Remote sync.
+- Write the validated design (spec) to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+  - (User preferences for spec location override this default)
+- Use elements-of-style:writing-clearly-and-concisely skill if available
+- Commit the design document to git
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
@@ -146,9 +127,16 @@ After writing the spec document, look at it with fresh eyes:
 
 Fix any issues inline. No need to re-review — just fix and move on.
 
+**User Review Gate:**
+After the spec review loop passes, ask the user to review the written spec before proceeding:
+
+> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
+
+Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
+
 **Implementation:**
 
-- Invoke the writing-plans skill to create a detailed implementation plan; pass it the decision bead ID (`$DECISION`) so the epic links via `--spec-id`. <!-- beads-native: fork-local -->
+- Invoke the writing-plans skill to create a detailed implementation plan
 - Do NOT invoke any other skill. writing-plans is the next step.
 
 ## Mandatory Web-Research Pass
