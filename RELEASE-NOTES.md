@@ -1,5 +1,12 @@
 # Superpowers Release Notes
 
+## v6.1.11 (2026-09-02) — fork-local
+
+### Tracker-neutral policy preservation
+
+- Restored factual release history removed during the issue-tracker decoupling.
+- Preserved generic session-completion discipline and automatic Subagent-Driven plan execution without restoring any tracker dependency.
+
 ## v6.1.10 (2026-09-02) — fork-local
 
 ### Issue-tracker decoupling
